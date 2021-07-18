@@ -9,7 +9,7 @@ import { DefaultInteractionCreateEvent } from './events/defaults/interaction-cre
 import { DefaultMessageCreateEvent } from './events/defaults/message-create';
 import { MemberListService } from './services/member-list';
 import { TimeoutService } from './services/timeout';
-import { DiscordUtil } from './util/discord';
+import { DiscordUtil, Mentionable } from './util/discord';
 import { ExpireAgeConversion, TimedCache } from './util/timed-cache';
 import { EventConfig, EventMap, EventTypeArray } from './events/config';
 import { DefaultReadyEvent } from './events/defaults/ready';
@@ -177,6 +177,41 @@ export abstract class PandaDiscordBot {
             return this.client.channels.cache.get(match[1] as Snowflake) || null;
         }
         return null;
+    }
+
+    /**
+     * Parses a Role instance from the mention string.
+     *
+     * Guild context is required for fetching roles.
+     * @param mention Mention string.
+     * @param guildId Guild context.
+     * @returns Role that was mentioned.
+     */
+    public getRoleFromMention(mention: string, guildId: Snowflake): Role | null {
+        const match = DiscordUtil.roleMentionRegex.exec(mention);
+        if (match) {
+            return this.client.guilds.cache.get(guildId).roles.cache.get(match[1] as Snowflake) || null;
+        }
+        return null;
+    }
+
+    /**
+     * Parses an ambiguous mention from a mention string.
+     *
+     * Guild context is required for members and roles.
+     * @param mention Mention string.
+     * @param guildId Guild context.
+     * @returns Member or role that was mentioned.
+     */
+    public getAmbiguousMention(mention: string, guildId: Snowflake): Mentionable | null {
+        const match = DiscordUtil.ambiguousMentionRegex.exec(mention);
+        if (!match) {
+            return null;
+        }
+        if (match[1] === '@&') {
+            return this.client.guilds.cache.get(guildId).roles.cache.get(match[2] as Snowflake) || null;
+        }
+        return this.client.guilds.cache.get(guildId).members.cache.get(match[2] as Snowflake) || null;
     }
 
     /**

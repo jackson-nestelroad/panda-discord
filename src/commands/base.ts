@@ -718,7 +718,6 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
 
     // Delegates a slash command to a sub-command
     public async runSlash(params: SlashCommandParameters<Bot>) {
-        console.log(params.options);
         let subCommandOption: CommandInteractionOption;
         subCommandOption = params.options.find(option => option.type === 'SUB_COMMAND_GROUP');
         if (!subCommandOption) {

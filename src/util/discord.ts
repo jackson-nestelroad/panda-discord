@@ -1,5 +1,7 @@
 import { ApplicationCommandOptionType } from 'discord-api-types';
-import { ApplicationCommand, ApplicationCommandData } from 'discord.js';
+import { ApplicationCommand, ApplicationCommandData, GuildMember, Role, User } from 'discord.js';
+
+export type Mentionable = GuildMember | User | Role;
 
 /**
  * Collection of utility functions and variables related to Discord.
@@ -13,8 +15,10 @@ export namespace DiscordUtil {
     export const userMentionRegex = /^<@!?(\d+)>$/;
     // Parses a channel mention.
     export const channelMentionRegex = /^<#(\d+)>$/;
-    // Prses a role mention.
+    // Parses a role mention.
     export const roleMentionRegex = /^<@&(\d+)>$/;
+    // Parses an ambiguous mention.
+    export const ambiguousMentionRegex = /^<(@(?:!?|&?))(\d+)>$/;
 
     /**
      * Common result interface for parsing data from a message.

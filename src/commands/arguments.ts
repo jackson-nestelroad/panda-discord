@@ -1,5 +1,14 @@
-import { ApplicationCommandOptionChoice, CommandInteractionOption, GuildChannel, GuildMember, Role } from 'discord.js';
+import {
+    ApplicationCommandOptionChoice,
+    Channel,
+    CommandInteractionOption,
+    GuildChannel,
+    GuildMember,
+    Role,
+    User,
+} from 'discord.js';
 import { PandaDiscordBot } from '../bot';
+import { Mentionable } from '../util/discord';
 import { ChatCommandParameters } from './params';
 
 /**
@@ -28,6 +37,10 @@ export enum ArgumentType {
     // Slash commands will give a mention, which corresponds to a Role.
     // Chat commands will allow a mention, role ID, or role name.
 
+    Mentionable = 9, // Any mentionable entity (user, channel, or role).
+    // Slash commmands will give a mention.
+    // Chat commands will allow a mention for any of the options.
+
     RestOfContent = 100, // The rest of the content in the message that has not been parsed.
     // Chat commands implement this trivially in parsing.
     // Slash commands implement this as a string, since they can take spaces.
@@ -39,7 +52,6 @@ export enum ArgumentType {
     // Unsupported types:
     // SUB_COMMAND
     // SUB_COMMAND_GROUP
-    // MENTIONABLE
 }
 
 // Conditional type explicitly uses for mapping an argument type to its parsed value type.
@@ -55,6 +67,8 @@ type ArgumentTypeResultMap<A extends ArgumentType> = A extends ArgumentType.Stri
     ? GuildChannel
     : A extends ArgumentType.Role
     ? Role
+    : A extends ArgumentType.Mentionable
+    ? Mentionable
     : A extends ArgumentType.RestOfContent
     ? string
     : A extends ArgumentType.FloatingPoint
@@ -205,6 +219,22 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
             },
         },
     },
+    [ArgumentType.Mentionable]: {
+        parsers: {
+            chat: (context, out) => {
+                out.value = context.params.bot.getAmbiguousMention(context.value, context.params.guildId);
+                if (!out.value) {
+                    out.error = `Invalid mention \`${context.value}\` for argument \`${context.name}\`.`;
+                }
+            },
+            slash: (option, out) => {
+                out.value = (option?.member as GuildMember) ?? (option?.user as User) ?? (option?.role as Role) ?? null;
+                if (!out.value) {
+                    out.error = `Invalid mention for argument \`${option.name}\`.`;
+                }
+            },
+        },
+    },
     [ArgumentType.RestOfContent]: {
         parsers: {
             chat: (context, out) => {
@@ -285,6 +315,7 @@ type TypedSingleArgumentConfig<P = unknown> =
     | SingleTypedSingleArgumentConfig<ArgumentType.User, P>
     | SingleTypedSingleArgumentConfig<ArgumentType.Channel, P>
     | SingleTypedSingleArgumentConfig<ArgumentType.Role, P>
+    | SingleTypedSingleArgumentConfig<ArgumentType.Mentionable, P>
     | SingleTypedSingleArgumentConfig<ArgumentType.RestOfContent, P>
     | SingleTypedSingleArgumentConfig<ArgumentType.FloatingPoint, P>;
 
