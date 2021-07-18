@@ -32,7 +32,7 @@ export class PurgeCommand extends ComplexCommand<ExampleBot, PurgeArgs> {
             required: true,
         },
         count: {
-            description: `Number of messages to delete. Default is ${this.defaultNumberToDelete}`,
+            description: `Number of messages to delete. Default is ${this.defaultNumberToDelete}.`,
             type: ArgumentType.Integer,
             required: false,
             default: this.defaultNumberToDelete,
