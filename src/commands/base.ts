@@ -18,6 +18,7 @@ import {
     SingleArgumentConfig,
     SingleArgumentTransformer,
 } from './arguments';
+import { DefaultCommandCategory } from './category';
 import { CommandMap, CommandTypeArray } from './config';
 import { ChatCommandParameters, CommandParameters, SlashCommandParameters } from './params';
 import { DefaultCommandPermission } from './permission';
@@ -55,6 +56,14 @@ namespace InternalCommandModifiers {
 
     export function setNestedDepth(cmd: BaseCommand, nestedLevel: number) {
         cmd['nestedDepth' as string] = nestedLevel;
+    }
+
+    export function setCategory(cmd: BaseCommand, category: string) {
+        cmd['category' as string] = category;
+    }
+
+    export function setPermission(cmd: BaseCommand, permission: string) {
+        cmd['permission' as string] = permission;
     }
 }
 
@@ -183,6 +192,16 @@ export interface BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot, Shar
     readonly subCommandMap?: CommandMap<string, Bot, Shared>;
 
     /**
+     * A flag signalling that the command listed on the help page should
+     * be flattened down at this level. In other words, all sub-commands will
+     * not appear as sepearate entries in the list of commands per category.
+     *
+     * Sub-commands can be still searched for on their own in the help
+     * command.
+     */
+    readonly flattenHelpForSubCommands?: boolean;
+
+    /**
      * Add any additional fields to the help page if desired.
      * @param embed Help embed.
      */
@@ -308,6 +327,20 @@ export abstract class BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot,
             if (this.cooldownSet.expireAge <= 0) {
                 this.cooldownSet = null;
             }
+        }
+
+        if (this.category === DefaultCommandCategory.Inherit) {
+            if (!this.parentCommand) {
+                this.throwConfigurationError('Only sub-commands can inherit command category from parent.');
+            }
+            InternalCommandModifiers.setCategory(this, this.parentCommand.category);
+        }
+
+        if (this.permission === DefaultCommandPermission.Inherit) {
+            if (!this.parentCommand) {
+                this.throwConfigurationError('Only sub-commands can inherit command permission from parent.');
+            }
+            InternalCommandModifiers.setPermission(this, this.parentCommand.permission);
         }
     }
 

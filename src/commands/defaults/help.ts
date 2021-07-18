@@ -2,7 +2,7 @@ import { PandaDiscordBot } from '../../bot';
 import { ExpireAgeConversion } from '../../util/timed-cache';
 import { ArgumentsConfig, ArgumentType } from '../arguments';
 import { ComplexCommand, StandardCooldowns } from '../base';
-import { DefaultCommandCategory } from '../category';
+import { CommandCategoryUtil, DefaultCommandCategory } from '../category';
 import { CommandMap } from '../config';
 import { CommandParameters } from '../params';
 import { DefaultCommandPermission } from '../permission';
@@ -35,17 +35,20 @@ export class HelpCommand extends ComplexCommand<PandaDiscordBot, HelpArgs> {
 
     private addCommandsToCommandListByCategory(map: CommandMap<string>, nameChain: string[] = []): void {
         map.forEach((cmd, name) => {
-            if (cmd.isNested) {
+            if (cmd.isNested && !cmd.flattenHelpForSubCommands) {
                 nameChain.push(name);
                 this.addCommandsToCommandListByCategory(cmd.subCommandMap, nameChain);
                 nameChain.pop();
             } else {
-                if (!this.commandListByCategory.has(cmd.category)) {
-                    this.commandListByCategory.set(cmd.category, []);
+                if (CommandCategoryUtil.isPublic(cmd.category)) {
+                    const categoryName = CommandCategoryUtil.realName(cmd.category);
+                    if (!this.commandListByCategory.has(categoryName)) {
+                        this.commandListByCategory.set(categoryName, []);
+                    }
+                    this.commandListByCategory
+                        .get(categoryName)
+                        .push(`${nameChain.length > 0 ? nameChain.join(' ') + ' ' : ''}${name} ${cmd.argsString()}`);
                 }
-                this.commandListByCategory
-                    .get(cmd.category)
-                    .push(`${nameChain.length > 0 ? nameChain.join(' ') + ' ' : ''}${name} ${cmd.argsString()}`);
             }
         });
     }
@@ -61,17 +64,14 @@ export class HelpCommand extends ComplexCommand<PandaDiscordBot, HelpArgs> {
             this.addCommandsToCommandListByCategory(bot.commands);
         }
 
-        // Blank, give all command categories.
+        // Blank, give all public command categories.
         if (!args.query) {
             embed.setTitle('All Command Categories');
             embed.setDescription(
                 `You may also use \`@${bot.name} cmd\` to run any command. Most commands are also available as slash commands.\n\nUse \`${prefix}${this.name}\` to view commands in a specific category.`,
             );
 
-            embed.addField(
-                'Categories',
-                bot.commandCategories.filter(category => category !== DefaultCommandCategory.Secret).join('\n'),
-            );
+            embed.addField('Categories', [...this.commandListByCategory.keys()].join('\n'));
         } else {
             const query = args.query;
 
@@ -106,7 +106,7 @@ export class HelpCommand extends ComplexCommand<PandaDiscordBot, HelpArgs> {
                 if (cmd) {
                     embed.setTitle(`${prefix}${fullName} ${cmd.argsString()}`);
                     embed.addField('Description', cmd.fullDescription());
-                    embed.addField('Category', cmd.category, true);
+                    embed.addField('Category', CommandCategoryUtil.realName(cmd.category), true);
                     embed.addField('Permission', cmd.permission, true);
                     embed.addField(
                         'Cooldown',
