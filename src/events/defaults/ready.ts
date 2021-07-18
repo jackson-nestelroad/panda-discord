@@ -33,16 +33,34 @@ export class DefaultReadyEvent extends BaseEvent<'ready', PandaDiscordBot> {
             type: 'PLAYING',
         });
 
-        // Create all global commands
+        // Store all global commands in the cache.
         await this.bot.client.application.commands.fetch();
 
+        // Look through all of the commands that currently exist as slash commands
+        // and delete ones that have been removed from the bot.
+        for (const [id, commandData] of this.bot.client.application.commands.cache) {
+            // This command has been removed altogether, or it has been moved to a guild.
+            const cmd = this.bot.commands.get(commandData.name);
+            if (!cmd || !cmd.isSlashCommand || cmd.slashGuildId) {
+                console.log(`Deleting slash command "${cmd.name}"`);
+                await this.bot.client.application.commands.delete(commandData);
+            }
+        }
+
+        // We do not currently support deleting commands that previously existed
+        // on a guild (using `slashGuildId`) but have been moved to global.
+        // If you run into this situation, it is best to first run the bot with
+        // the command removed, then run it with the command added with the
+        // `slashGuildId` property enabled.
+
+        // Go through every internal command and possibly update its slash command.
         for (const [name, cmd] of this.bot.commands) {
             if (cmd.isSlashCommand) {
                 const newData = cmd.commandData();
                 const cmdManager = await this.getCommandManager(cmd);
 
-                // Check if command already exists
-                // If so, check if it has been updated in any way
+                // Check if command already exists.
+                // If so, check if it has been updated in any way.
                 const old = cmdManager.cache.find(cmd => cmd.name === name);
                 if (old) {
                     if (DiscordUtil.slashCommandNeedsUpdate(old, newData)) {
@@ -54,7 +72,7 @@ export class DefaultReadyEvent extends BaseEvent<'ready', PandaDiscordBot> {
                     await cmdManager.create(newData);
                 }
             } else {
-                // Remove command if it exists when it should not
+                // Remove command if it exists when it should not.
                 const cmdManager = await this.getCommandManager(cmd);
                 const old = cmdManager.cache.find(cmd => cmd.name === name);
                 if (old) {
