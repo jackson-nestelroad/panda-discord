@@ -8,4 +8,5 @@
 export enum DefaultCommandPermission {
     Everyone = 'Everyone',
     Owner = 'Owner',
+    Inherit = '_Inherit',
 }
