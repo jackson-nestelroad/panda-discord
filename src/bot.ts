@@ -32,12 +32,7 @@ type CompletePandaOptions = { [option in keyof PandaOptions]-?: PandaOptions[opt
 
 const defaultOptions: CompletePandaOptions = {
     client: {
-        intents: [
-            Intents.FLAGS.GUILDS,
-            Intents.FLAGS.GUILD_BANS,
-            Intents.FLAGS.GUILD_MEMBERS,
-            Intents.FLAGS.GUILD_MESSAGES,
-        ],
+        intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
     },
     commands: [HelpCommand, PingCommand],
     events: [DefaultMessageCreateEvent, DefaultReadyEvent],
