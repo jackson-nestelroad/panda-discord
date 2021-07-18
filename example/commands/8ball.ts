@@ -6,7 +6,6 @@ interface EightBallArgs {
 }
 
 export class EightBallCommand extends ComplexCommand<ExampleBot, EightBallArgs> {
-    public prefix = ':8ball: - ';
     public name = '8ball';
     public description = 'Shakes the Magic 8-ball for a glimpse into the future.';
     public category = CommandCategory.Fun;
@@ -45,6 +44,6 @@ export class EightBallCommand extends ComplexCommand<ExampleBot, EightBallArgs> 
     ];
 
     public async run({ src }: CommandParameters<ExampleBot>, args: EightBallArgs) {
-        await src.send(this.prefix + this.options[Math.floor(Math.random() * this.options.length)]);
+        await src.send(':8ball: - ' + this.options[Math.floor(Math.random() * this.options.length)]);
     }
 }

@@ -134,12 +134,6 @@ namespace InternalCommandModifiers {
 // Optional fields for command handlers
 export interface BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot, Shared = any> {
     /**
-     * Prefix of the command for descriptions and messages.
-     * Mostly a legacy field that goes mostly unused.
-     */
-    readonly prefix?: string;
-
-    /**
      * More description exclusively available on the help page.
      */
     readonly moreDescription?: string | string[];
