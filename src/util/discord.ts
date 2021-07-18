@@ -107,9 +107,6 @@ export namespace DiscordUtil {
      */
     function deepEqual(a: object, b: object): boolean {
         if (a && b && typeof a === 'object' && typeof b === 'object') {
-            if (Object.keys(a).length !== Object.keys(b).length) {
-                return false;
-            }
             for (const key in a) {
                 if (!deepEqual(a[key], b[key])) {
                     return false;
@@ -129,7 +126,9 @@ export namespace DiscordUtil {
      */
     export function slashCommandNeedsUpdate(old: ApplicationCommand, newData: ApplicationCommandData): boolean {
         // First check description and options length.
-        let needsUpdate = old.description !== newData.description;
+        let needsUpdate = old.name !== newData.name;
+        needsUpdate ||= old.description !== newData.description;
+        needsUpdate ||= !!old.defaultPermission !== !!newData.defaultPermission;
         needsUpdate ||= old.options.length !== (newData.options?.length ?? 0);
 
         // Options lengths are the same, so check every option.

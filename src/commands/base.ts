@@ -1,11 +1,10 @@
 import {
     ApplicationCommandData,
-    ApplicationCommandOption,
     ApplicationCommandOptionType,
+    CommandInteractionOption,
     MessageEmbed,
     Snowflake,
 } from 'discord.js';
-import { ApplicationCommandOptionTypes } from 'discord.js/typings/enums';
 import { PandaDiscordBot } from '../bot';
 import { DiscordUtil } from '../util/discord';
 import { ExpireAge, ExpireAgeFormat, TimedCache } from '../util/timed-cache';
@@ -52,6 +51,10 @@ namespace InternalCommandModifiers {
         parent: BaseCommand<PandaDiscordBot, Shared>,
     ) {
         child['parentCommand' as string] = parent;
+    }
+
+    export function setNestedDepth(cmd: BaseCommand, nestedLevel: number) {
+        cmd['nestedDepth' as string] = nestedLevel;
     }
 }
 
@@ -230,6 +233,15 @@ export abstract class BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot,
     protected readonly parentCommand: Shared extends never ? never : BaseCommand<Bot, Shared>;
 
     /**
+     * The nested depth of this command as a sub-command.
+     *
+     * 0 indicates the command is a top-level command.
+     * 1 indicates the command has sub-commands.
+     * 2 indicates the command has sub-command groups.
+     */
+    protected readonly nestedDepth: number = 0;
+
+    /**
      * Maps user IDs to the number of times they have tried to use this command
      * before their cooldown has finished.
      */
@@ -343,7 +355,7 @@ export abstract class SimpleCommand<Bot extends PandaDiscordBot, Shared = never>
         return {
             name: this.name,
             description: this.description,
-            options: [],
+            options: undefined,
             defaultPermission: this.permission === DefaultCommandPermission.Everyone,
         };
     }
@@ -430,7 +442,7 @@ abstract class ParameterizedCommand<
                     description: data.description,
                     type: ParameterizedCommand.convertArgumentType(data.type),
                     required: data.required,
-                    choices: data.choices,
+                    choices: data.choices?.length !== 0 ? data.choices : undefined ?? undefined,
                 };
             }),
             defaultPermission: this.permission === DefaultCommandPermission.Everyone,
@@ -589,6 +601,13 @@ export abstract class LegacyCommand<
     }
 }
 
+export interface NestedCommand<Bot extends PandaDiscordBot, Shared = void> {
+    /**
+     * Creates the object that will be shared with all children of this nested command.
+     */
+    initializeShared?(): Shared;
+}
+
 /**
  * A command that delegates to sub-commands.
  * Currently only one level of nesting is supported.
@@ -605,11 +624,6 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
     // Actual sub-command map to delegate commands to.
     public subCommandMap: CommandMap<string, Bot, Shared>;
 
-    /**
-     * Creates the object that will be shared with all children of this nested command.
-     */
-    public abstract initializeShared(): Shared;
-
     public argsString() {
         return `(${[...this.subCommandMap.keys()].join(' | ')})`;
     }
@@ -617,6 +631,14 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
     public initialize() {
         super.initialize();
 
+        // If depth is currently 2, then the next level of commands will be depth 3,
+        // which is not supported by Discord.
+        if (this.nestedDepth >= 2) {
+            this.throwConfigurationError(`Nested commands only support two levels of nesting.`);
+        }
+
+        // Some extra validations for the Discord API. We check them here just to provide
+        // nicer error messages for invalid commands.
         if (this.subCommands.length === 0) {
             this.throwConfigurationError(`Sub-command array cannot be empty.`);
         }
@@ -624,20 +646,18 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
             this.throwConfigurationError(`Command can only have up to 25 sub-commands.`);
         }
 
-        // Set up all sub-command instances
-        InternalCommandModifiers.setShared(this, this.initializeShared());
+        // Set up shared data for all sub-commands if this is the top level.
+        if (!this.parentCommand && this.initializeShared) {
+            InternalCommandModifiers.setShared(this, this.initializeShared());
+        }
+
         this.subCommandMap = new Map();
         for (const cmd of this.subCommands) {
             const instance = new cmd();
-            instance.initialize();
             InternalCommandModifiers.setShared(instance, this.shared);
             InternalCommandModifiers.setParent(instance, this);
-
-            if (instance.isNested) {
-                this.throwConfigurationError(
-                    `Sub-command ${instance.name} is nested, but commands only support 1 level of nesting.`,
-                );
-            }
+            InternalCommandModifiers.setNestedDepth(instance, this.nestedDepth + 1);
+            instance.initialize();
 
             this.subCommandMap.set(instance.name, instance);
         }
@@ -653,11 +673,15 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
 
         for (const [key, cmd] of [...this.subCommandMap.entries()]) {
             const subData = cmd.commandData();
+            // We only support two levels of nesting, so this logic is adequate.
+            // If the command is nested, then this level should be the sub-command group.
+            // If the command is not nested, then this level should be the sub-command.
+            const type: ApplicationCommandOptionType = cmd.isNested ? 'SUB_COMMAND_GROUP' : 'SUB_COMMAND';
             data.options.push({
                 name: cmd.name,
                 description: cmd.description,
-                type: 'SUB_COMMAND',
-                options: subData.options as ApplicationCommandOption[],
+                type,
+                options: subData.options?.length !== 0 ? subData.options : undefined ?? undefined,
             });
         }
 
@@ -694,20 +718,23 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
 
     // Delegates a slash command to a sub-command
     public async runSlash(params: SlashCommandParameters<Bot>) {
-        const subCommandOption = params.options.find(option => option.type === 'SUB_COMMAND');
+        console.log(params.options);
+        let subCommandOption: CommandInteractionOption;
+        subCommandOption = params.options.find(option => option.type === 'SUB_COMMAND_GROUP');
         if (!subCommandOption) {
-            throw new Error(`Missing sub-command for command \`${this.name}\`.`);
+            subCommandOption = params.options.find(option => option.type === 'SUB_COMMAND');
+            if (!subCommandOption) {
+                throw new Error(`Missing sub-command for command \`${this.name}\`.`);
+            }
+        }
+        const subCommand = this.subCommandMap.get(subCommandOption.name);
+        if (!subCommand) {
+            throw new Error(`Invalid sub-command for command \`${this.name}\`.`);
         }
 
-        if (this.subCommandMap.has(subCommandOption.name)) {
-            params.options.delete(subCommandOption.name);
-
-            const subCommand = this.subCommandMap.get(subCommandOption.name);
-            if (await params.bot.validate(params, subCommand)) {
-                await subCommand.executeSlash(params);
-            }
-        } else {
-            throw new Error(`Invalid sub-command for command \`${this.name}\`.`);
+        params.options = subCommandOption.options;
+        if (await params.bot.validate(params, subCommand)) {
+            await subCommand.executeSlash(params);
         }
     }
 }
