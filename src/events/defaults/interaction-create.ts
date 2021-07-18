@@ -24,7 +24,7 @@ export class DefaultInteractionCreateEvent extends BaseEvent<'interactionCreate'
         }
 
         // User is on timeout.
-        if (this.bot.timeoutService.onTimeout(interaction.user)) {
+        if (this.bot.timeoutService?.onTimeout(interaction.user)) {
             return;
         }
 

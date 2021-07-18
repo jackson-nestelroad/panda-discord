@@ -48,7 +48,7 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate', PandaD
         }
 
         // User is on timeout.
-        if (this.bot.timeoutService.onTimeout(msg.author)) {
+        if (this.bot.timeoutService?.onTimeout(msg.author)) {
             return;
         }
 
