@@ -58,7 +58,7 @@ const CommandSourceTypeMap = {
 const StronglyTypedCommandSourceTypes: { [type in CommandSourceType]: CommandSourceTypeMetadata } =
     CommandSourceTypeMap;
 
-// Different ommand source types do not use inheritance.
+// Different command source types do not use inheritance.
 // Instead, a single named value is exposed on the command source depending
 // on the underlying type.
 // This allows a single constructor to be used and the correct value is always exposed.
