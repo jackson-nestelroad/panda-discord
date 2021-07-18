@@ -18,7 +18,7 @@ export class DefaultInteractionCreateEvent extends BaseEvent<'interactionCreate'
             return;
         }
 
-        // User is a bot or in a direct message.
+        // User is a bot.
         if (interaction.user.bot) {
             return;
         }

@@ -42,7 +42,7 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate', PandaD
     }
 
     public async run(msg: Message) {
-        // User is a bot or in a direct message.
+        // User is a bot.
         if (msg.author.bot) {
             return;
         }
