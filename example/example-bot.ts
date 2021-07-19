@@ -2,6 +2,7 @@ import { Snowflake } from 'discord-api-types';
 import {
     BaseCommand,
     CommandParameters,
+    CommandPermissionValidatorConfig,
     DefaultCommandCategory,
     DefaultCommandPermission,
     MemberListService,
@@ -26,29 +27,22 @@ export const CommandCategory = {
 export class ExampleBot extends PandaDiscordBot {
     public color = '#CE8AE2' as `#${string}`;
     public commandCategories = Object.values(CommandCategory);
+    public permissionValidators: CommandPermissionValidatorConfig<this> = {
+        [CommandPermission.Mod]: params => {
+            const member = params.src.member;
+            if (!member) {
+                return false;
+            }
+            return member.roles.cache.find(role => role.name === 'Moderator') !== undefined;
+        },
+    };
 
     public memberListService: MemberListService = new MemberListService(this);
     public timeoutService: TimeoutService = new TimeoutService(this);
 
     public async getPrefix(guildId: Snowflake): Promise<string> {
+        // Can wire up a database here if desired to store a different prefix
+        // for each guild.
         return '!';
-    }
-
-    public async validate(params: CommandParameters, command: BaseCommand): Promise<boolean> {
-        switch (command.permission) {
-            case DefaultCommandPermission.Everyone:
-                return true;
-            case DefaultCommandPermission.Owner:
-                return params.src.author.id === this.options.owner;
-            case CommandPermission.Mod: {
-                const member = params.src.member;
-                if (!member) {
-                    return false;
-                }
-                return member.roles.cache.find(role => role.name === 'Moderator') !== undefined;
-            }
-            default:
-                throw new Error(`No validation found for command permission: ${command.permission}.`);
-        }
     }
 }
