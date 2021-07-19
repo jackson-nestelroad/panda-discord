@@ -15,14 +15,22 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate', PandaD
     }
 
     private async runCommand(content: string, msg: Message, guildId: Snowflake) {
-        const args = this.bot.splitIntoArgs(content);
+        const src = new CommandSource(msg);
+        let args: string[];
+        try {
+            args = this.bot.splitIntoArgs(content);
+        } catch (error) {
+            await this.bot.sendError(src, error);
+            return;
+        }
+
         const cmd = args.shift();
         content = content.substr(cmd.length).trim();
         content = content.replace(this.forbiddenMentionRegex, '@\u{200b}$1');
 
         const params: ChatCommandParameters = {
             bot: this.bot,
-            src: new CommandSource(msg),
+            src,
             args,
             content,
             guildId,

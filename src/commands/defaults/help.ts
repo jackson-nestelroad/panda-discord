@@ -95,7 +95,7 @@ export class HelpCommand extends ComplexCommand<PandaDiscordBot, HelpArgs> {
             }
             // Query is some global command.
             else {
-                const queryList = bot.splitIntoArgs(query);
+                const queryList = query.split(' ');
                 let cmd = bot.commands.get(queryList[0]);
                 let i = 1;
                 while (cmd && cmd.isNested && i < queryList.length) {

@@ -146,11 +146,81 @@ export abstract class PandaDiscordBot {
 
     /**
      * Splits a string into arguments to be consumed by a command.
+     * 
+     * By default, strings are split by spaces. However, quotes can be used
+     * to keep multiple words together. Quotes can also be escaped using
+     * backslashes (`\`).
      * @param str String to split.
      * @returns Array of arguments.
      */
     public splitIntoArgs(str: string): string[] {
-        return str.split(' ');
+        if (!str) {
+            return [];
+        }
+        const args: string[] = [];
+        let escaped = false;
+        let quoted = false;
+        let nextArg: string = '';
+        for (const nextChar of str) {
+            switch (nextChar) {
+                case '\\':
+                    escaped = !escaped;
+                    // Escaped backslash, add it to the argument.
+                    if (!escaped) {
+                        nextArg += nextChar;
+                    }
+                    break;
+                case '"':
+                    if (quoted) {
+                        // End of quoted argument.
+                        if (!escaped) {
+                            args.push(nextArg);
+                            nextArg = '';
+                            quoted = false;
+                            // Escaped quote, add it to the argument.
+                        } else {
+                            nextArg += nextChar;
+                            escaped = false;
+                        }
+                        // Escaped quote, not the beginning of a quoted argument.
+                    } else if (escaped) {
+                        nextArg += nextChar;
+                        escaped = false;
+                        // Beginning of a quoted argument.
+                    } else {
+                        // Some argument existed before this quoted segment,
+                        // so add it here.
+                        if (nextArg) {
+                            args.push(nextArg);
+                            nextArg = '';
+                        }
+                        quoted = true;
+                    }
+                    break;
+                // Spaces are used to separate non-quoted arguments.
+                // In quotes, spaces are trated like any other character.
+                case ' ':
+                    if (!quoted) {
+                        args.push(nextArg);
+                        nextArg = '';
+                        break;
+                    }
+                // Fall through.
+                default:
+                    // Simply add to the argument.
+                    escaped = false;
+                    nextArg += nextChar;
+                    break;
+            }
+        }
+
+        // Quote mismatch.
+        if (quoted) {
+            throw new Error('Could not split content into arguments: quotation mismatch.');
+        } else if (nextArg) {
+            args.push(nextArg);
+        }
+        return args;
     }
 
     /**
