@@ -23,7 +23,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "npm run format && tsc",
     "format": "prettier --write \"src/**/*.ts\" \"example/**/*.ts\"",
-    "version" : "npm run format"
+    "version" : "npm run format",
+    "example": "npm run build && node build/example/index"
   },
   "devDependencies": {
     "prettier": "^2.3.2",
