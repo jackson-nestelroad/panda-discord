@@ -1,5 +1,4 @@
 import { Channel, Client, ClientOptions, GuildMember, Intents, MessageEmbed, Role, Snowflake, User } from 'discord.js';
-import { BaseCommand } from './commands/base';
 import { CommandConfig, CommandMap, CommandTypeArray } from './commands/config';
 import { CommandSource } from './commands/command-source';
 import { CommandParameters } from './commands/params';
@@ -15,6 +14,8 @@ import { EventConfig, EventMap, EventTypeArray } from './events/config';
 import { DefaultReadyEvent } from './events/defaults/ready';
 import { HelpCommand } from './commands/defaults/help';
 import { PingCommand } from './commands/defaults/ping';
+import { CommandPermissionValidatorConfig, DefaultCommandPermission } from './commands/permission';
+import { BaseCommand } from './commands/base';
 
 /**
  * Options for setting up the underlying PandaDiscordBot instance.
@@ -45,16 +46,54 @@ const defaultOptions: CompletePandaOptions = {
  * Discord bot that uses the Panda command framework.
  */
 export abstract class PandaDiscordBot {
-    // Color to appear in normal embeds.
+    /**
+     * Color to appear in normal embeds.
+     */
     public abstract readonly color: `#${string}`;
+
+    /**
+     * All command categories for the bot.
+     */
     public abstract readonly commandCategories: string[];
+
+    /**
+     * Maps a command permission string to how it should be validated by
+     * the bot.
+     */
+    public abstract readonly permissionValidators: CommandPermissionValidatorConfig<this>;
+
+    /**
+     * When the bot started.
+     */
     public readonly startedAt: Date = new Date();
+
+    /**
+     * The Discord.JS client for the bot. Undefined state until the ready event has fired.
+     */
     public readonly client: Client;
 
+    /**
+     * Maps a command name to the command instance that should handle it.
+     */
     public commands: CommandMap<string>;
+
+    /**
+     * Maps an event name to the event instance that should handle it.
+     */
     public events: EventMap;
 
+    /**
+     * Service that fetches and caches entire member lists for guilds.
+     *
+     * Define this property on your bot class to use it for internal methods.
+     */
     public memberListService?: MemberListService;
+
+    /**
+     * Service that times users out if they repeatedly violate command timeouts.
+     *
+     * Define this property on your bot class to use it for internal methods.
+     */
     public timeoutService?: TimeoutService;
 
     protected options: CompletePandaOptions;
@@ -106,8 +145,29 @@ export abstract class PandaDiscordBot {
         this.commands = CommandConfig.build(this.options.commands);
     }
 
-    public refreshEvents() {
+    /**
+     * Refresh the events by recreating every event.
+     * All data inside of each event will be reset.
+     */
+    protected refreshEvents() {
         this.events = EventConfig.build(this.options.events, this);
+    }
+
+    /**
+     * Sets the default command permission validators if they are not set by
+     * the deriving class.
+     */
+    protected setDefaultPermissionValidators() {
+        if (!this.permissionValidators[DefaultCommandPermission.Everyone]) {
+            this.permissionValidators[DefaultCommandPermission.Everyone] = () => {
+                return true;
+            };
+        }
+        if (!this.permissionValidators[DefaultCommandPermission.Owner]) {
+            this.permissionValidators[DefaultCommandPermission.Owner] = params => {
+                return params.src.author.id === this.options.owner;
+            };
+        }
     }
 
     /**
@@ -146,7 +206,7 @@ export abstract class PandaDiscordBot {
 
     /**
      * Splits a string into arguments to be consumed by a command.
-     * 
+     *
      * By default, strings are split by spaces. However, quotes can be used
      * to keep multiple words together. Quotes can also be escaped using
      * backslashes (`\`).
@@ -380,6 +440,21 @@ export abstract class PandaDiscordBot {
     }
 
     /**
+     * Validates if the given command and parameters should run.
+     * @param params Command parameters.
+     * @param command Command attempting to run.
+     * @returns Promise for if the command should run.
+     * True to run, false to not run.
+     */
+    public validate(params: CommandParameters<this>, command: BaseCommand): boolean {
+        const validator = this.permissionValidators[command.permission];
+        if (!validator) {
+            throw new Error(`No validation found for command permission "${command.permission}".`);
+        }
+        return validator(params);
+    }
+
+    /**
      * Handles a cooldown for the given command source in the given cooldown set.
      * This method is used by all commands to properly store and enforce cooldowns.
      * @param src Source of the command.
@@ -435,20 +510,12 @@ export abstract class PandaDiscordBot {
     public abstract getPrefix(guildId: Snowflake): Promise<string>;
 
     /**
-     * Validates if the given command and parameters should run.
-     * @param params Command parameters.
-     * @param command Command attempting to run.
-     * @returns Promise for if the command should run.
-     * True to run, false to not run.
-     */
-    public abstract validate(params: CommandParameters<this>, command: BaseCommand): Promise<boolean>;
-
-    /**
      * Run the bot, logging in with the given bot token.
      * @param token Bot token. This should be a secret!
      */
     public async run(token: string) {
         try {
+            this.setDefaultPermissionValidators();
             if (this.initialize) {
                 await this.initialize();
             }

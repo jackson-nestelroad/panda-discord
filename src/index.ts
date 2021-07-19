@@ -21,7 +21,11 @@ export { EvalCommand } from './commands/defaults/eval';
 export { HelpCommand } from './commands/defaults/help';
 export { PingCommand } from './commands/defaults/ping';
 export { CommandParameters, ChatCommandParameters, SlashCommandParameters } from './commands/params';
-export { DefaultCommandPermission } from './commands/permission';
+export {
+    CommandPermissionValidator,
+    CommandPermissionValidatorConfig,
+    DefaultCommandPermission,
+} from './commands/permission';
 export { EmbedProps, EmbedOptions, EmbedTemplates } from './embeds/options';
 export { BaseEvent } from './events/base';
 export { EventTypeArray, EventMap, EventConfig } from './events/config';
