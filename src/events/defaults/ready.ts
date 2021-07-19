@@ -42,7 +42,7 @@ export class DefaultReadyEvent extends BaseEvent<'ready', PandaDiscordBot> {
             // This command has been removed altogether, or it has been moved to a guild.
             const cmd = this.bot.commands.get(commandData.name);
             if (!cmd || !cmd.isSlashCommand || cmd.slashGuildId) {
-                console.log(`Deleting slash command "${cmd.name}"`);
+                console.log(`Deleting slash command "${commandData.name}"`);
                 await this.bot.client.application.commands.delete(commandData);
             }
         }
