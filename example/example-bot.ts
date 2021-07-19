@@ -1,7 +1,5 @@
 import { Snowflake } from 'discord-api-types';
 import {
-    BaseCommand,
-    CommandParameters,
     CommandPermissionValidatorConfig,
     DefaultCommandCategory,
     DefaultCommandPermission,
