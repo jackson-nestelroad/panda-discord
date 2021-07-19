@@ -2,6 +2,7 @@ import { Snowflake } from 'discord-api-types';
 import {
     BaseCommand,
     CommandParameters,
+    DefaultCommandCategory,
     DefaultCommandPermission,
     MemberListService,
     PandaDiscordBot,
@@ -13,11 +14,11 @@ export const CommandPermission = {
     Mod: 'Moderator',
 };
 
-export enum CommandCategory {
-    Utility = 'Utility',
-    Fun = 'Fun!',
-    Staff = 'Staff',
-}
+export const CommandCategory = {
+    ...DefaultCommandCategory,
+    Fun: 'Fun!',
+    Staff: 'Staff',
+};
 
 /**
  * Example bot for the Panda command framework.
