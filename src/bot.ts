@@ -23,7 +23,7 @@ export interface PandaOptions {
     client: ClientOptions;
     commands?: CommandTypeArray;
     events?: EventTypeArray;
-    interactionEvent?: { new (bot: PandaDiscordBot): BaseEvent<'interactionCreate'> };
+    interactionEvent?: new (bot: PandaDiscordBot) => BaseEvent<'interactionCreate'>;
     cooldownOffensesForTimeout?: number;
     owner?: Snowflake;
 }

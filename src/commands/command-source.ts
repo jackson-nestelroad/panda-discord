@@ -33,7 +33,7 @@ enum CommandSourceType {
 }
 
 interface CommandSourceTypeMetadata {
-    type: { new (...args: any[]): any };
+    type: new (...args: any[]) => any;
     field: string;
 }
 
