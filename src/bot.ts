@@ -296,7 +296,6 @@ export abstract class PandaDiscordBot {
             args.push(nextArg);
         }
 
-        console.log(args);
         return args;
     }
 
