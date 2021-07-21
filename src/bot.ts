@@ -42,6 +42,14 @@ const defaultOptions: CompletePandaOptions = {
     owner: null,
 };
 
+export interface PandaDiscordBot {
+    /**
+     * Maps a command permission string to how it should be validated by
+     * the bot.
+     */
+    readonly permissionValidators?: CommandPermissionValidatorConfig<this>;
+}
+
 /**
  * Discord bot that uses the Panda command framework.
  */
@@ -55,12 +63,6 @@ export abstract class PandaDiscordBot {
      * All command categories for the bot.
      */
     public abstract readonly commandCategories: string[];
-
-    /**
-     * Maps a command permission string to how it should be validated by
-     * the bot.
-     */
-    public abstract readonly permissionValidators: CommandPermissionValidatorConfig<this>;
 
     /**
      * When the bot started.
@@ -158,6 +160,11 @@ export abstract class PandaDiscordBot {
      * the deriving class.
      */
     protected setDefaultPermissionValidators() {
+        // Deriving class did not set an object at all, so we must set it ourselves.
+        if (!this.permissionValidators) {
+            this['permissionValidators' as string] = {};
+        }
+
         if (!this.permissionValidators[DefaultCommandPermission.Everyone]) {
             this.permissionValidators[DefaultCommandPermission.Everyone] = () => {
                 return true;
