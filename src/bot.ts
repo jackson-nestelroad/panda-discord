@@ -127,7 +127,7 @@ export abstract class PandaDiscordBot {
      * The bot's username, as it is currently cached on the Discord client object.
      */
     public get name(): string {
-        this.assertRunning(`PandaDiscordBot.start() must be called before accessing bot name.`);
+        this.assertRunning(`PandaDiscordBot.run() must be called before accessing bot name.`);
         return this.client.user.username;
     }
 
@@ -135,7 +135,7 @@ export abstract class PandaDiscordBot {
      * The bot's avatar URL, as it is currently cached on the Discord client object.
      */
     public get avatarUrl(): string {
-        this.assertRunning(`PandaDiscordBot.start() must be called before accessing bot avatar.`);
+        this.assertRunning(`PandaDiscordBot.run() must be called before accessing bot avatar.`);
         return this.client.user.avatarURL();
     }
 
