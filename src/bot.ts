@@ -21,11 +21,45 @@ import { BaseCommand } from './commands/base';
  * Options for setting up the underlying PandaDiscordBot instance.
  */
 export interface PandaOptions {
+    /**
+     * Options that are passed to the Discord.JS client.
+     * 
+     * If anything, the WebSocket intents are required for setting up which events
+     * the bot should receive.
+     */
     client: ClientOptions;
+    /**
+     * Array of command classes that are created to handle commands.
+     */
     commands?: CommandTypeArray;
+    /**
+     * Array of event classes that are used to handle Discord events.
+     * 
+     * Do not put an "interactionCreate" handler in this array. Instead, use the
+     * `interactionEvent` option, because the interaction event is typically set
+     * up after slash commands are created, which occurs after the ready event
+     * fires.
+     */
     events?: EventTypeArray;
+    /**
+     * The class that is set up to handle "interactionCreate" events, which is
+     * typically used for slash commands.
+     * 
+     * Must be specified separately so that the event can only be attached after 
+     * all of the necessary slash commands are created.
+     */
     interactionEvent?: new (bot: PandaDiscordBot) => BaseEvent<'interactionCreate'>;
+    /**
+     * Number of cooldown offenses a user has to make before going on timeout.
+     * 
+     * A cooldown offense occurs when a user attempts to use a command in its
+     * cooldown period. The user is timed out, which means the bot ignores all
+     * messages and interactions from them.
+     */
     cooldownOffensesForTimeout?: number;
+    /**
+     * The user ID of the bot owner. Used for the "Owner" command permission.
+     */
     owner?: Snowflake;
 }
 
