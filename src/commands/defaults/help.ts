@@ -29,9 +29,15 @@ export class HelpCommand extends ComplexCommand<PandaDiscordBot, HelpArgs> {
         },
     };
 
+    /**
+     * Number of commands allowed in a single column before writing them
+     * next to each other separated by commads.
+     */
+    protected readonly singleColumnLimit = 20;
+
     // Cache for list of command names by category.
     // Key is a lowercase, normalized version of the category name.
-    private commandListByCategory: Map<string, string[]> = null;
+    private commandListByCategory: Map<string, Map<string, string>> = null;
 
     private addCommandsToCommandListByCategory(map: CommandMap<string>, nameChain: string[] = []): void {
         map.forEach((cmd, name) => {
@@ -43,11 +49,10 @@ export class HelpCommand extends ComplexCommand<PandaDiscordBot, HelpArgs> {
                 if (CommandCategoryUtil.isPublic(cmd.category)) {
                     const categoryName = CommandCategoryUtil.realName(cmd.category);
                     if (!this.commandListByCategory.has(categoryName)) {
-                        this.commandListByCategory.set(categoryName, []);
+                        this.commandListByCategory.set(categoryName, new Map());
                     }
-                    this.commandListByCategory
-                        .get(categoryName)
-                        .push(`${nameChain.length > 0 ? nameChain.join(' ') + ' ' : ''}${name} ${cmd.argsString()}`);
+                    const fullName = (nameChain.length > 0 ? nameChain.join(' ') + ' ' : '') + name;
+                    this.commandListByCategory.get(categoryName).set(fullName, `${fullName} ${cmd.argsString()}`);
                 }
             }
         });
@@ -87,10 +92,13 @@ export class HelpCommand extends ComplexCommand<PandaDiscordBot, HelpArgs> {
             // Query is a category.
             if (matchedCategory !== null) {
                 embed.setTitle(`${matchedCategory} Commands`);
-                const commandsString = this.commandListByCategory
-                    .get(matchedCategory)
-                    .map(value => `${prefix}${value}`)
-                    .join('\n');
+                const categoryCommands = this.commandListByCategory.get(matchedCategory);
+                let commandsString: string;
+                if (categoryCommands.size <= this.singleColumnLimit) {
+                    commandsString = [...categoryCommands.values()].map(value => `${prefix}${value}`).join('\n');
+                } else {
+                    commandsString = [...categoryCommands.keys()].map(value => `\`${prefix}${value}\``).join(', ');
+                }
                 embed.setDescription(commandsString);
             }
             // Query is some global command.
