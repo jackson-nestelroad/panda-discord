@@ -267,9 +267,17 @@ export abstract class PandaDiscordBot {
                 // Spaces are used to separate non-quoted arguments.
                 // In quotes, spaces are trated like any other character.
                 case ' ':
+                case '\f':
+                case '\n':
+                case '\r':
+                case '\t':
+                case '\v':
                     if (!quoted) {
-                        args.push(nextArg);
-                        nextArg = '';
+                        // Only push if we have a meaningful next argument.
+                        if (nextArg) {
+                            args.push(nextArg);
+                            nextArg = '';
+                        }
                         break;
                     }
                 // Fall through.
@@ -287,6 +295,8 @@ export abstract class PandaDiscordBot {
         } else if (nextArg) {
             args.push(nextArg);
         }
+
+        console.log(args);
         return args;
     }
 
