@@ -37,7 +37,7 @@ export enum ArgumentType {
     // Slash commands will give a mention, which corresponds to a Role.
     // Chat commands will allow a mention, role ID, or role name.
 
-    Mentionable = 9, // Any mentionable entity (user, channel, or role).
+    Mentionable = 9, // Any mentionable entity (user or role).
     // Slash commmands will give a mention.
     // Chat commands will allow a mention for any of the options.
 
