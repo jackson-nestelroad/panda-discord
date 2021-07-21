@@ -73,7 +73,7 @@ export class HelpCommand extends ComplexCommand<PandaDiscordBot, HelpArgs> {
         if (!args.query) {
             embed.setTitle('All Command Categories');
             embed.setDescription(
-                `You may also use \`@${bot.name} cmd\` to run any command. Most commands are also available as slash commands.\n\nUse \`${prefix}${this.name}\` to view commands in a specific category.`,
+                `You may also use \`@${bot.name} cmd\` to run any command. Public commands are also available as slash commands.\n\nUse \`${prefix}${this.name}\` to view commands in a specific category.`,
             );
 
             embed.addField('Categories', [...this.commandListByCategory.keys()].join('\n'));
