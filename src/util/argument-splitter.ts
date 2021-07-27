@@ -62,9 +62,9 @@ export class ArgumentSplitterError extends Error {
 }
 
 /**
- * Provides an an array-like interface to arguments split by `ArgumentSplitter`.
+ * Provides an array-like interface to arguments split by `ArgumentSplitter`.
  * The primary feature of this class is the ability to restore the string the arguments
- * were parsed from using `restoreFrom(i)`.
+ * were parsed from using `restore(i)`.
  */
 export class SplitArgumentArray {
     /**
