@@ -16,6 +16,7 @@ import { HelpCommand } from './commands/defaults/help';
 import { PingCommand } from './commands/defaults/ping';
 import { CommandPermissionValidatorConfig, DefaultCommandPermission } from './commands/permission';
 import { BaseCommand } from './commands/base';
+import { ArgumentSplitter, SplitArgumentArray } from './util/argument-splitter';
 
 /**
  * Options for setting up the underlying PandaDiscordBot instance.
@@ -23,7 +24,7 @@ import { BaseCommand } from './commands/base';
 export interface PandaOptions {
     /**
      * Options that are passed to the Discord.JS client.
-     * 
+     *
      * If anything, the WebSocket intents are required for setting up which events
      * the bot should receive.
      */
@@ -34,7 +35,7 @@ export interface PandaOptions {
     commands?: CommandTypeArray;
     /**
      * Array of event classes that are used to handle Discord events.
-     * 
+     *
      * Do not put an "interactionCreate" handler in this array. Instead, use the
      * `interactionEvent` option, because the interaction event is typically set
      * up after slash commands are created, which occurs after the ready event
@@ -44,14 +45,14 @@ export interface PandaOptions {
     /**
      * The class that is set up to handle "interactionCreate" events, which is
      * typically used for slash commands.
-     * 
-     * Must be specified separately so that the event can only be attached after 
+     *
+     * Must be specified separately so that the event can only be attached after
      * all of the necessary slash commands are created.
      */
     interactionEvent?: new (bot: PandaDiscordBot) => BaseEvent<'interactionCreate'>;
     /**
      * Number of cooldown offenses a user has to make before going on timeout.
-     * 
+     *
      * A cooldown offense occurs when a user attempts to use a command in its
      * cooldown period. The user is timed out, which means the bot ignores all
      * messages and interactions from them.
@@ -248,89 +249,15 @@ export abstract class PandaDiscordBot {
     /**
      * Splits a string into arguments to be consumed by a command.
      *
-     * By default, strings are split by spaces. However, quotes can be used
-     * to keep multiple words together. Quotes can also be escaped using
-     * backslashes (`\`).
+     * By default, strings are split by spaces. However, quotes or
+     * backticks can be used to keep multiple words together.
+     * Quotes and backticks can also be escaped using backslashes (`\`).
      * @param str String to split.
      * @returns Array of arguments.
      */
-    public splitIntoArgs(str: string): string[] {
-        if (!str) {
-            return [];
-        }
-        const args: string[] = [];
-        let escaped = false;
-        let quoted = false;
-        let nextArg: string = '';
-        for (const nextChar of str) {
-            switch (nextChar) {
-                case '\\':
-                    escaped = !escaped;
-                    // Escaped backslash, add it to the argument.
-                    if (!escaped) {
-                        nextArg += nextChar;
-                    }
-                    break;
-                case '"':
-                    if (quoted) {
-                        // End of quoted argument.
-                        if (!escaped) {
-                            args.push(nextArg);
-                            nextArg = '';
-                            quoted = false;
-                            // Escaped quote, add it to the argument.
-                        } else {
-                            nextArg += nextChar;
-                            escaped = false;
-                        }
-                        // Escaped quote, not the beginning of a quoted argument.
-                    } else if (escaped) {
-                        nextArg += nextChar;
-                        escaped = false;
-                        // Beginning of a quoted argument.
-                    } else {
-                        // Some argument existed before this quoted segment,
-                        // so add it here.
-                        if (nextArg) {
-                            args.push(nextArg);
-                            nextArg = '';
-                        }
-                        quoted = true;
-                    }
-                    break;
-                // Spaces are used to separate non-quoted arguments.
-                // In quotes, spaces are trated like any other character.
-                case ' ':
-                case '\f':
-                case '\n':
-                case '\r':
-                case '\t':
-                case '\v':
-                    if (!quoted) {
-                        // Only push if we have a meaningful next argument.
-                        if (nextArg) {
-                            args.push(nextArg);
-                            nextArg = '';
-                        }
-                        break;
-                    }
-                // Fall through.
-                default:
-                    // Simply add to the argument.
-                    escaped = false;
-                    nextArg += nextChar;
-                    break;
-            }
-        }
-
-        // Quote mismatch.
-        if (quoted) {
-            throw new Error('Could not split content into arguments: quotation mismatch.');
-        } else if (nextArg) {
-            args.push(nextArg);
-        }
-
-        return args;
+    public splitIntoArgs(str: string): SplitArgumentArray {
+        const splitter = new ArgumentSplitter();
+        return splitter.split(str);
     }
 
     /**

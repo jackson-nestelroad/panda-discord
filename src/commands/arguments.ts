@@ -8,6 +8,7 @@ import {
     User,
 } from 'discord.js';
 import { PandaDiscordBot } from '../bot';
+import { ArgumentSplitter, SplitArgumentArray } from '../util/argument-splitter';
 import { Mentionable } from '../util/discord';
 import { ChatCommandParameters } from './params';
 
@@ -49,6 +50,10 @@ export enum ArgumentType {
     // Chat commands implement this trivially in parsing.
     // Slash commands implement this as a string that is parsed later by the bot.
 
+    SplitArguments = 102, // An array of split arguments that have been parsed by ArgumentSplitter.
+    // Chat commands implement this by simply passing the rest of the split args array.
+    // Slash commands implement this by manually splitting the string given by the user.
+
     // Unsupported types:
     // SUB_COMMAND
     // SUB_COMMAND_GROUP
@@ -73,6 +78,8 @@ type ArgumentTypeResultMap<A extends ArgumentType> = A extends ArgumentType.Stri
     ? string
     : A extends ArgumentType.FloatingPoint
     ? number
+    : A extends ArgumentType.SplitArguments
+    ? SplitArgumentArray
     : never;
 
 // The default value, which is a union of the above types.
@@ -238,7 +245,7 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
     [ArgumentType.RestOfContent]: {
         parsers: {
             chat: (context, out) => {
-                context.value = context.params.args.slice(context.i).join(' ');
+                context.value = context.params.args.restore(context.i);
                 context.i = context.params.args.length;
                 ArgumentTypeConfig[ArgumentType.String].parsers.chat(context, out);
             },
@@ -268,6 +275,21 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
                 out.value = parseFloat(option.value as string);
                 if (isNaN(out.value)) {
                     out.error = `Invalid floating point value \`${option.value}\` for argument \`${option.name}\`.`;
+                }
+            },
+        },
+    },
+    [ArgumentType.SplitArguments]: {
+        parsers: {
+            chat: (context, out) => {
+                out.value = context.params.args.slice(context.i);
+                context.i = context.params.args.length;
+            },
+            slash: (option, out) => {
+                try {
+                    out.value = new ArgumentSplitter().split(option.value as string);
+                } catch (error) {
+                    out.error = error.toString();
                 }
             },
         },
@@ -317,7 +339,8 @@ type TypedSingleArgumentConfig<P = unknown> =
     | SingleTypedSingleArgumentConfig<ArgumentType.Role, P>
     | SingleTypedSingleArgumentConfig<ArgumentType.Mentionable, P>
     | SingleTypedSingleArgumentConfig<ArgumentType.RestOfContent, P>
-    | SingleTypedSingleArgumentConfig<ArgumentType.FloatingPoint, P>;
+    | SingleTypedSingleArgumentConfig<ArgumentType.FloatingPoint, P>
+    | SingleTypedSingleArgumentConfig<ArgumentType.SplitArguments, P>;
 
 // Parts of the argument config that do not depend on types.
 interface UntypedSingleArgumentConfig {

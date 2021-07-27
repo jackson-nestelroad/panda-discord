@@ -435,6 +435,8 @@ abstract class ParameterizedCommand<
                 return 'STRING';
             case ArgumentType.FloatingPoint:
                 return 'STRING';
+            case ArgumentType.SplitArguments:
+                return 'STRING';
             default:
                 return DiscordUtil.ActualApplicationCommandOptionTypeEnum[type] as ApplicationCommandOptionType;
         }
@@ -566,7 +568,7 @@ export abstract class ComplexCommand<
             // context.name is really of type "keyof T".
             context.name = entry[0];
             context.config = entry[1] as SingleArgumentConfig;
-            context.value = params.args[context.i];
+            context.value = params.args.get(context.i);
 
             const argConfig: SingleArgumentConfig = this.args[context.name as keyof ArgumentsConfig<Args>];
             const typeConfig: ArgumentTypeMetadata<Bot> = ArgumentTypeConfig[argConfig.type];

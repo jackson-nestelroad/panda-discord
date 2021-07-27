@@ -1,6 +1,7 @@
 import { Snowflake } from 'discord-api-types';
 import { Collection, CommandInteractionOption } from 'discord.js';
 import { PandaDiscordBot } from '../bot';
+import { SplitArgumentArray } from '../util/argument-splitter';
 import { CommandSource } from './command-source';
 
 /**
@@ -16,7 +17,7 @@ export interface CommandParameters<Bot extends PandaDiscordBot = PandaDiscordBot
  * Parameters exclusive to chat commands.
  */
 export interface ChatCommandParameters<Bot extends PandaDiscordBot = PandaDiscordBot> extends CommandParameters<Bot> {
-    args: string[];
+    args: SplitArgumentArray;
     content: string;
 }
 

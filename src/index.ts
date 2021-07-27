@@ -35,7 +35,8 @@ export { DefaultReadyEvent } from './events/defaults/ready';
 export { BaseService } from './services/base';
 export { MemberListService } from './services/member-list';
 export { TimeoutService } from './services/timeout';
-export { DiscordUtil, Mentionable } from './util/discord';
+export { ArgumentSplitter, ArgumentSplitterError, SplitArgument, SplitArgumentArray } from './util/argument-splitter';
+export { DiscordCodeMarkup, DiscordUtil, Mentionable } from './util/discord';
 export { EvalUtil } from './util/eval';
 export {
     TimedCacheEntry,

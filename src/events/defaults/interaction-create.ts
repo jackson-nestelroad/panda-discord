@@ -39,7 +39,7 @@ export class DefaultInteractionCreateEvent extends BaseEvent<'interactionCreate'
 
             try {
                 const command = this.bot.commands.get(interaction.commandName);
-                if (await this.bot.validate(params, command)) {
+                if (this.bot.validate(params, command)) {
                     await command.executeSlash(params);
                 }
             } catch (error) {

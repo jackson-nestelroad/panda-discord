@@ -2,6 +2,7 @@ import { Message, Snowflake } from 'discord.js';
 import { PandaDiscordBot } from '../../bot';
 import { CommandSource } from '../../commands/command-source';
 import { ChatCommandParameters } from '../../commands/params';
+import { SplitArgumentArray } from '../../util/argument-splitter';
 import { BaseEvent } from '../base';
 
 /**
@@ -16,7 +17,7 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate', PandaD
 
     private async runCommand(content: string, msg: Message, guildId: Snowflake) {
         const src = new CommandSource(msg);
-        let args: string[];
+        let args: SplitArgumentArray;
         try {
             args = this.bot.splitIntoArgs(content);
         } catch (error) {
@@ -40,7 +41,7 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate', PandaD
         if (this.bot.commands.has(cmd)) {
             try {
                 const command = this.bot.commands.get(cmd);
-                if (await this.bot.validate(params, command)) {
+                if (this.bot.validate(params, command)) {
                     await command.executeChat(params);
                 }
             } catch (error) {

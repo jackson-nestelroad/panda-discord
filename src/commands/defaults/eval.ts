@@ -65,7 +65,7 @@ export class EvalCommand extends LegacyCommand<PandaDiscordBot, EvalArgs> {
         }
 
         // Parse code from code blocks/lines
-        const code = DiscordUtil.getCodeBlockOrLine(args.code)?.content ?? args.code;
+        const code = DiscordUtil.getCodeBlockOrLine(args.code)?.result?.content ?? args.code;
 
         let res = await EvalUtil.runCodeToString(code, {
             params,

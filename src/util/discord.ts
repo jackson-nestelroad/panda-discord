@@ -3,14 +3,20 @@ import { ApplicationCommand, ApplicationCommandData, GuildMember, Role, User } f
 
 export type Mentionable = GuildMember | User | Role;
 
+export interface DiscordCodeMarkup {
+    readonly language?: string;
+    readonly content: string;
+    readonly isBlock: boolean;
+}
+
 /**
  * Collection of utility functions and variables related to Discord.
  */
 export namespace DiscordUtil {
     // Parses a single code block.
-    export const codeBlockRegex = /```(?:[^\s]*\n)?((?:.|\n)+)\n?```/s;
+    export const codeBlockRegex = /```(?:([^\s`]*)\n)?((?:(?:[^`]|`[^`]|``[^`])|\n)+)\n?```/s;
     // Parses a single line of code.
-    export const codeLineRegex = /^(`{1,2})([^`]*)\1$/;
+    export const codeLineRegex = /(`{1,2})([^`]*)\1/;
     // Parses a user mention.
     export const userMentionRegex = /^<@!?(\d+)>$/;
     // Parses a channel mention.
@@ -23,13 +29,13 @@ export namespace DiscordUtil {
     /**
      * Common result interface for parsing data from a message.
      */
-    interface RegexMatchResult {
+    export interface RegexMatchResult<T> {
         // Did the regex match?
         match: boolean;
         // Index the regex matched at.
         index: number;
-        // Content parsed from the match.
-        content?: string;
+        // Data parsed from the match.
+        result?: T;
     }
 
     /**
@@ -37,13 +43,13 @@ export namespace DiscordUtil {
      * @param content Content to parse.
      * @returns Result object.
      */
-    export function getCodeBlock(content: string): RegexMatchResult {
-        const result: RegexMatchResult = { match: false, index: -1 };
+    export function getCodeBlock(content: string): RegexMatchResult<DiscordCodeMarkup> {
+        const result: RegexMatchResult<DiscordCodeMarkup> = { match: false, index: -1 };
         const match = codeBlockRegex.exec(content);
         if (match) {
             result.match = true;
             result.index = match.index;
-            result.content = match[1];
+            result.result = { language: match[1], content: match[2], isBlock: true };
         }
         return result;
     }
@@ -53,13 +59,13 @@ export namespace DiscordUtil {
      * @param content Content to parse.
      * @returns Result object.
      */
-    export function getCodeLine(content: string): RegexMatchResult {
-        const result: RegexMatchResult = { match: false, index: -1 };
+    export function getCodeLine(content: string): RegexMatchResult<DiscordCodeMarkup> {
+        const result: RegexMatchResult<DiscordCodeMarkup> = { match: false, index: -1 };
         const match = codeLineRegex.exec(content);
         if (match) {
             result.match = true;
             result.index = match.index;
-            result.content = match[2];
+            result.result = { content: match[2], isBlock: false };
         }
         return result;
     }
@@ -70,7 +76,7 @@ export namespace DiscordUtil {
      * @param content Content to parse.
      * @returns Result object.
      */
-    export function getCodeBlockOrLine(content: string): RegexMatchResult {
+    export function getCodeBlockOrLine(content: string): RegexMatchResult<DiscordCodeMarkup> {
         const codeBlock = DiscordUtil.getCodeBlock(content);
         if (codeBlock.match) {
             return codeBlock;
