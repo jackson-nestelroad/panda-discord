@@ -743,7 +743,7 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
             params.content = params.content.substring(subNameIndex).trimLeft();
 
             const subCommand = this.subCommandMap.get(subName);
-            if (await params.bot.validate(params, subCommand)) {
+            if (params.bot.validate(params, subCommand)) {
                 await subCommand.executeChat(params);
             }
         } else {
