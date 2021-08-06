@@ -20,7 +20,7 @@ import {
 } from './arguments';
 import { DefaultCommandCategory } from './category';
 import { CommandMap, CommandTypeArray } from './config';
-import { ChatCommandParameters, CommandParameters, SlashCommandParameters } from './params';
+import { ChatCommandParameters, CommandParameters, SlashCommandArgumentLevel, SlashCommandParameters } from './params';
 import { DefaultCommandPermission } from './permission';
 
 type ReadonlyDictionary<T> = { readonly [key: string]: T };
@@ -751,24 +751,45 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
         }
     }
 
+    private getSubcommand(params: SlashCommandParameters<Bot>): string | null {
+        switch (params.level) {
+            case SlashCommandArgumentLevel.SubcommandGroup:
+                // Inside subcommand group, must have a subcommand.
+                params.level = SlashCommandArgumentLevel.Subcommand;
+                return params.options.getSubcommand(false);
+            case SlashCommandArgumentLevel.Subcommand:
+                // Inside subcommand, no more nesting!
+                return null;
+            default:
+                // Top level command, could be a group or subcommand.
+                const subcommandGroup = params.options.getSubcommandGroup(false);
+                if (subcommandGroup) {
+                    params.level = SlashCommandArgumentLevel.SubcommandGroup;
+                    return subcommandGroup;
+                }
+
+                const subcommand = params.options.getSubcommand(false);
+                if (subcommand) {
+                    params.level = SlashCommandArgumentLevel.Subcommand;
+                    return subcommand;
+                }
+        }
+    }
+
     // Delegates a slash command to a sub-command
     public async runSlash(params: SlashCommandParameters<Bot>) {
-        let subCommandOption: CommandInteractionOption;
-        subCommandOption = params.options.find(option => option.type === 'SUB_COMMAND_GROUP');
-        if (!subCommandOption) {
-            subCommandOption = params.options.find(option => option.type === 'SUB_COMMAND');
-            if (!subCommandOption) {
-                throw new Error(`Missing sub-command for command \`${this.name}\`.`);
-            }
+        const subCommandSelected = this.getSubcommand(params);
+        if (!subCommandSelected) {
+            throw new Error(`Missing sub-command for command \`${this.name}\`.`);
         }
-        const subCommand = this.subCommandMap.get(subCommandOption.name);
-        if (!subCommand) {
+
+        const subcommand = this.subCommandMap.get(subCommandSelected);
+        if (!subcommand) {
             throw new Error(`Invalid sub-command for command \`${this.name}\`.`);
         }
 
-        params.options = subCommandOption.options;
-        if (await params.bot.validate(params, subCommand)) {
-            await subCommand.executeSlash(params);
+        if (params.bot.validate(params, subcommand)) {
+            await subcommand.executeSlash(params);
         }
     }
 }

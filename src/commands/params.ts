@@ -1,5 +1,5 @@
 import { Snowflake } from 'discord-api-types';
-import { Collection, CommandInteractionOption } from 'discord.js';
+import { CommandInteractionOptionResolver } from 'discord.js';
 import { PandaDiscordBot } from '../bot';
 import { SplitArgumentArray } from '../util/argument-splitter';
 import { CommandSource } from './command-source';
@@ -22,8 +22,19 @@ export interface ChatCommandParameters<Bot extends PandaDiscordBot = PandaDiscor
 }
 
 /**
+ * The current level the slash command is executing in.
+ *
+ * Used for finding the next subcommand, if appplicable, to delegate down to.
+ */
+export enum SlashCommandArgumentLevel {
+    SubcommandGroup,
+    Subcommand,
+}
+
+/**
  * Parameters exclusive to slash commands.
  */
 export interface SlashCommandParameters<Bot extends PandaDiscordBot = PandaDiscordBot> extends CommandParameters<Bot> {
-    options: Collection<string, CommandInteractionOption>;
+    options: CommandInteractionOptionResolver;
+    level?: SlashCommandArgumentLevel;
 }

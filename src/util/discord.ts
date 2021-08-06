@@ -93,8 +93,8 @@ export namespace DiscordUtil {
      * Runtime enum type for ApplicationCommandOptionType conversion from string to integer.
      */
     export enum ActualApplicationCommandOptionTypeEnum {
-        SUB_COMMAND = ApplicationCommandOptionType.SubCommand,
-        SUB_COMMAND_GROUP = ApplicationCommandOptionType.SubCommandGroup,
+        SUB_COMMAND = ApplicationCommandOptionType.Subcommand,
+        SUB_COMMAND_GROUP = ApplicationCommandOptionType.SubcommandGroup,
         STRING = ApplicationCommandOptionType.String,
         INTEGER = ApplicationCommandOptionType.Integer,
         BOOLEAN = ApplicationCommandOptionType.Boolean,

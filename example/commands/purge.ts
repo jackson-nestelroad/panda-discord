@@ -23,7 +23,6 @@ export class PurgeCommand extends ComplexCommand<ExampleBot, PurgeArgs> {
     public cooldown = StandardCooldowns.High;
 
     public readonly defaultNumberToDelete: number = 100;
-    public readonly ageLimit: number = 14 * 24 * 60 * 60 * 1000;
 
     public args: ArgumentsConfig<PurgeArgs> = {
         user: {
@@ -62,13 +61,9 @@ export class PurgeCommand extends ComplexCommand<ExampleBot, PurgeArgs> {
         }
 
         const channelHistory = await args.channel.messages.fetch({ limit: 100 });
-        const now = new Date();
-        const toDelete = channelHistory
-            .filter(msg => msg.author.id === args.user.id && now.valueOf() - msg.createdAt.valueOf() < this.ageLimit)
-            .array()
-            .slice(0, args.count);
+        const toDelete = channelHistory.filter(msg => msg.author.id === args.user.id).first(args.count);
 
-        const deleted = await args.channel.bulkDelete(toDelete);
+        const deleted = await args.channel.bulkDelete(toDelete, true);
         const embed = bot.createEmbed(EmbedTemplates.Success);
         embed.setDescription(
             `Purged ${deleted.size} messages from ${args.user.user.username} in ${args.channel.toString()}.`,

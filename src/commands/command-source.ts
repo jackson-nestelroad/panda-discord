@@ -209,7 +209,7 @@ export class CommandSource {
     public async defer(ephemeral: boolean = false): Promise<void> {
         if (this.isInteraction() && !this.interaction.deferred && !this.interaction.replied) {
             this.deferredEphemeral = ephemeral;
-            this.interaction.defer({ ephemeral });
+            await this.interaction.deferReply({ ephemeral });
             this.interaction.deferred = true;
         }
     }
