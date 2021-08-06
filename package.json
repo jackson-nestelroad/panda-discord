@@ -14,8 +14,7 @@
     "commands"
   ],
   "files": [
-    "build/**/*",
-    "!build/example"
+    "build/src/**/*"
   ],
   "main": "build/src/index.js",
   "types": "build/src/index.d.ts",
