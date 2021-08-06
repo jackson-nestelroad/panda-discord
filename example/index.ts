@@ -19,7 +19,7 @@ import { ExampleBot } from './example-bot';
             ],
         },
     });
-    await bot.run('MTg0MTU2NTExMzYxMDQwMzg0.V0KDHQ.6tnRKkZrycanwbOelY6wG0Jvr0U');
+    await bot.run('TOKEN_HERE');
 })().catch(error => {
     console.error(error);
     process.exit(1);
