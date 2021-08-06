@@ -1,12 +1,12 @@
 {
-  "name": "panda-discord-bot",
+  "name": "panda-discord",
   "version": "1.0.0",
-  "description": "Command framework for building Discord bots on Discord.JS.",
+  "description": "Command framework for building Discord bots with discord.js, allowing chat and slash commands to run through one handler.",
   "author": "jackson-nestelroad",
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jackson-nestelroad/panda.git"
+    "url": "https://github.com/jackson-nestelroad/panda-discord.git"
   },
   "keywords": [
     "discord",
