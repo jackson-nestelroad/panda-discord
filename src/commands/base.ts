@@ -104,8 +104,8 @@ namespace InternalCommandModifiers {
     LegacyCommand ---           A parameterized command that specifies custom parsing for
                                 chat commands. Commands that specify arguments using
                                 special formatting must use their own parser.
-    NestedCommand ---           A command with one level of sub-commands. Nested commands
-                                delegate running the command to a sub-command based on the
+    NestedCommand ---           A command with one level of subcommands. Nested commands
+                                delegate running the command to a subcommand based on the
                                 first argument.
 
     Furthermore, there are generic types across each class.
@@ -114,9 +114,9 @@ namespace InternalCommandModifiers {
                                 and legacy parsers.
     Shared ---                  The type of the `BaseCommand.shared` object, which provides
                                 data and methods that can be used across a nested command
-                                chain. Commands that do not have sub-commands use the `never`
+                                chain. Commands that do not have subcommands use the `never`
                                 type to communicate that there is never shared data, while
-                                nested commands provide shared data to its sub-commands.
+                                nested commands provide shared data to its subcommands.
 
     See the following commands and how they would be represented in this framework:
         
@@ -135,10 +135,10 @@ namespace InternalCommandModifiers {
         /message-listener add code ---  BaseCommand >>> NestedCommand
         /message-listener remove id
                 This command could be represented as a ComplexCommand with two arguments,
-                but the first argument changes how the command works. The `add` sub-command
+                but the first argument changes how the command works. The `add` subcommand
                 takes in code (which can be the rest of the message's content), while the
-                `remove` sub-command takes in a single integer. This scenario suits the use
-                case for a nested command, which will then have two sub-command objects, both
+                `remove` subcommand takes in a single integer. This scenario suits the use
+                case for a nested command, which will then have two subcommand objects, both
                 represented as a complex command.
 
 */
@@ -187,16 +187,16 @@ export interface BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot, Shar
     readonly isNested?: boolean;
 
     /**
-     * Map of sub-commands, which is only useful if the command is nested.
+     * Map of subcommands, which is only useful if the command is nested.
      */
     readonly subCommandMap?: CommandMap<string, Bot, Shared>;
 
     /**
      * A flag signalling that the command listed on the help page should
-     * be flattened down at this level. In other words, all sub-commands will
+     * be flattened down at this level. In other words, all subcommands will
      * not appear as sepearate entries in the list of commands per category.
      *
-     * Sub-commands can be still searched for on their own in the help
+     * Subcommands can be still searched for on their own in the help
      * command.
      */
     readonly flattenHelpForSubCommands?: boolean;
@@ -242,21 +242,21 @@ export abstract class BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot,
 
     /**
      * An object that provides shared access to data inside of this command handler.
-     * Only used for sub-commands to share common data.
+     * Only used for subcommands to share common data.
      */
     protected readonly shared: Shared;
 
     /**
-     * The parent of this command if it is a sub-command.
+     * The parent of this command if it is a subcommand.
      */
     protected readonly parentCommand: Shared extends never ? never : BaseCommand<Bot, Shared>;
 
     /**
-     * The nested depth of this command as a sub-command.
+     * The nested depth of this command as a subcommand.
      *
      * 0 indicates the command is a top-level command.
-     * 1 indicates the command has sub-commands.
-     * 2 indicates the command has sub-command groups.
+     * 1 indicates the command has subcommands.
+     * 2 indicates the command has subcommand groups.
      */
     protected readonly nestedDepth: number = 0;
 
@@ -331,14 +331,14 @@ export abstract class BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot,
 
         if (this.category === DefaultCommandCategory.Inherit) {
             if (!this.parentCommand) {
-                this.throwConfigurationError('Only sub-commands can inherit command category from parent.');
+                this.throwConfigurationError('Only subcommands can inherit command category from parent.');
             }
             InternalCommandModifiers.setCategory(this, this.parentCommand.category);
         }
 
         if (this.permission === DefaultCommandPermission.Inherit) {
             if (!this.parentCommand) {
-                this.throwConfigurationError('Only sub-commands can inherit command permission from parent.');
+                this.throwConfigurationError('Only subcommands can inherit command permission from parent.');
             }
             InternalCommandModifiers.setPermission(this, this.parentCommand.permission);
         }
@@ -644,7 +644,7 @@ export interface NestedCommand<Bot extends PandaDiscordBot, Shared = void> {
 }
 
 /**
- * A command that delegates to sub-commands.
+ * A command that delegates to subcommands.
  * Currently only one level of nesting is supported.
  */
 export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> extends BaseCommand<Bot, Shared> {
@@ -652,11 +652,11 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
     public isNested: true = true;
 
     /**
-     * Configuration array of sub-command types to initialize internally.
+     * Configuration array of subcommand types to initialize internally.
      */
     public abstract subCommands: CommandTypeArray<Bot, Shared>;
 
-    // Actual sub-command map to delegate commands to.
+    // Actual subcommand map to delegate commands to.
     public subCommandMap: CommandMap<string, Bot, Shared>;
 
     public argsString() {
@@ -675,13 +675,13 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
         // Some extra validations for the Discord API. We check them here just to provide
         // nicer error messages for invalid commands.
         if (this.subCommands.length === 0) {
-            this.throwConfigurationError(`Sub-command array cannot be empty.`);
+            this.throwConfigurationError(`Subcommand array cannot be empty.`);
         }
         if (this.subCommands.length > 25) {
-            this.throwConfigurationError(`Command can only have up to 25 sub-commands.`);
+            this.throwConfigurationError(`Command can only have up to 25 subcommands.`);
         }
 
-        // Set up shared data for all sub-commands if this is the top level.
+        // Set up shared data for all subcommands if this is the top level.
         if (!this.parentCommand && this.initializeShared) {
             InternalCommandModifiers.setShared(this, this.initializeShared());
         }
@@ -709,8 +709,8 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
         for (const [key, cmd] of [...this.subCommandMap.entries()]) {
             const subData = cmd.commandData();
             // We only support two levels of nesting, so this logic is adequate.
-            // If the command is nested, then this level should be the sub-command group.
-            // If the command is not nested, then this level should be the sub-command.
+            // If the command is nested, then this level should be the subcommand group.
+            // If the command is not nested, then this level should be the subcommand.
             const type: ApplicationCommandOptionType = cmd.isNested ? 'SUB_COMMAND_GROUP' : 'SUB_COMMAND';
             data.options.push({
                 name: cmd.name,
@@ -724,13 +724,13 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
     }
 
     public addHelpFields(embed: MessageEmbed) {
-        embed.addField('Sub-Commands', [...this.subCommandMap.keys()].map(key => `\`${key}\``).join(', '));
+        embed.addField('Subcommands', [...this.subCommandMap.keys()].map(key => `\`${key}\``).join(', '));
     }
 
-    // Delegates a chat command to a sub-command.
+    // Delegates a chat command to a subcommand.
     public async runChat(params: ChatCommandParameters<Bot>) {
         if (params.args.length === 0) {
-            throw new Error(`Missing sub-command for command \`${this.name}\`.`);
+            throw new Error(`Missing subcommand for command \`${this.name}\`.`);
         }
 
         const subName = params.args.shift();
@@ -738,7 +738,7 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
         if (this.subCommandMap.has(subName)) {
             const subNameIndex = params.content.indexOf(subName);
             if (subNameIndex === -1) {
-                throw new Error(`Could not find sub-command name in content field.`);
+                throw new Error(`Could not find subcommand name in content field.`);
             }
             params.content = params.content.substring(subNameIndex).trimLeft();
 
@@ -747,7 +747,7 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
                 await subCommand.executeChat(params);
             }
         } else {
-            throw new Error(`Invalid sub-command for command \`${this.name}\`.`);
+            throw new Error(`Invalid subcommand for command \`${this.name}\`.`);
         }
     }
 
@@ -776,16 +776,16 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
         }
     }
 
-    // Delegates a slash command to a sub-command
+    // Delegates a slash command to a subcommand
     public async runSlash(params: SlashCommandParameters<Bot>) {
         const subCommandSelected = this.getSubcommand(params);
         if (!subCommandSelected) {
-            throw new Error(`Missing sub-command for command \`${this.name}\`.`);
+            throw new Error(`Missing subcommand for command \`${this.name}\`.`);
         }
 
         const subcommand = this.subCommandMap.get(subCommandSelected);
         if (!subcommand) {
-            throw new Error(`Invalid sub-command for command \`${this.name}\`.`);
+            throw new Error(`Invalid subcommand for command \`${this.name}\`.`);
         }
 
         if (params.bot.validate(params, subcommand)) {

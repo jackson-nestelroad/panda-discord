@@ -349,7 +349,7 @@ interface UntypedSingleArgumentConfig {
 }
 
 // Configuration for a single argument.
-// This is slightly different than what Discord offers since we handle sub-commands differently.
+// This is slightly different than what Discord offers since we handle subcommands differently.
 export type SingleArgumentConfig<P = unknown> = UntypedSingleArgumentConfig & TypedSingleArgumentConfig<P>;
 
 // Object for configuring arguments accepted and used by the command.

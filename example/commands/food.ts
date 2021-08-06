@@ -14,7 +14,7 @@ import { CommandCategory, CommandPermission, ExampleBot } from '../example-bot';
 // This file contains a detailed example of a nested command with shared data.
 
 /**
- * Each food group. A sub-command group is generated for each group listed here.
+ * Each food group. A subcommand group is generated for each group listed here.
  * Thus, these values should be unique and representable as a command name.
  */
 enum FoodGroup {
@@ -72,7 +72,7 @@ interface FoodNameArgs {
 }
 
 /**
- * Generates all sub-commands for a single food group.
+ * Generates all subcommands for a single food group.
  * @param group Food group.
  * @returns Nested command type for food group.
  */
@@ -182,7 +182,7 @@ class ClearAllFoodSubCommand extends SimpleCommand<ExampleBot, SharedFoodData> {
 }
 
 /**
- * Example of a nested command with sub-commands and sub-command groups.
+ * Example of a nested command with subcommands and subcommand groups.
  */
 export class FoodCommand extends NestedCommand<ExampleBot, SharedFoodData> {
     public name = 'food';
