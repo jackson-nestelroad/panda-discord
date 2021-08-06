@@ -34,6 +34,6 @@ export namespace CommandCategoryUtil {
      * @returns Category string with out prefixes.
      */
     export function realName(category: string): string {
-        return category[0] === '_' ? (category[1] === '_' ? category.substr(2) : category.substr(1)) : category;
+        return category[0] === '_' ? category.substr(1) : category;
     }
 }
