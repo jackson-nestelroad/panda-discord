@@ -1,13 +1,10 @@
-import { ApplicationCommandManager, GuildApplicationCommandManager } from 'discord.js';
 import { PandaDiscordBot } from '../../bot';
-import { BaseCommand } from '../../commands/base';
-import { DiscordUtil } from '../../util/discord';
 import { BaseEvent } from '../base';
 
 /**
  * Default event handler for the ready event.
  */
-export class DefaultReadyEvent extends BaseEvent<'ready', PandaDiscordBot> {
+export class DefaultReadyEvent extends BaseEvent<'ready'> {
     constructor(bot: PandaDiscordBot) {
         super(bot, 'ready');
     }

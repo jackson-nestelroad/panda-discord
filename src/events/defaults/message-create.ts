@@ -8,7 +8,7 @@ import { BaseEvent } from '../base';
 /**
  * Default event handler for messages.
  */
-export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate', PandaDiscordBot> {
+export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
     private forbiddenMentionRegex = /@(everyone|here)/g;
 
     constructor(bot: PandaDiscordBot) {

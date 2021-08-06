@@ -1,13 +1,12 @@
 import { VariableTimedCacheSet } from '../util/timed-cache';
 import { Snowflake, User } from 'discord.js';
 import { BaseService } from './base';
-import { PandaDiscordBot } from '../bot';
 
 /**
  * Service for handling user timeouts.
  * When a user is on timeout, the bot ignores all commands interactions from them.
  */
-export class TimeoutService extends BaseService<PandaDiscordBot> {
+export class TimeoutService extends BaseService {
     /**
      * Maps a user ID to the number of times they have been on timeout.
      */

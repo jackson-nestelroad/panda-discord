@@ -5,6 +5,6 @@ import { PandaDiscordBot } from '../bot';
  * be accessed by multiple commands. Services are the most consistent way
  * to store state and common methods across multiple commands.
  */
-export abstract class BaseService<Bot extends PandaDiscordBot> {
+export abstract class BaseService<Bot extends PandaDiscordBot = PandaDiscordBot> {
     constructor(protected bot: Bot) {}
 }

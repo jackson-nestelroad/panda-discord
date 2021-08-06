@@ -7,7 +7,7 @@ import { BaseEvent } from '../base';
 /**
  * Default event handler for interactions.
  */
-export class DefaultInteractionCreateEvent extends BaseEvent<'interactionCreate', PandaDiscordBot> {
+export class DefaultInteractionCreateEvent extends BaseEvent<'interactionCreate'> {
     constructor(bot: PandaDiscordBot) {
         super(bot, 'interactionCreate');
     }

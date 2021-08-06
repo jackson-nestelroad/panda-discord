@@ -6,7 +6,7 @@ import { BaseService } from './base';
 /**
  * Service for fetching and caching the entire member list of a guild.
  */
-export class MemberListService extends BaseService<PandaDiscordBot> {
+export class MemberListService extends BaseService {
     private readonly cache: TimedCache<Snowflake, Collection<Snowflake, GuildMember>>;
 
     public constructor(bot: PandaDiscordBot, expireAge: ExpireAge = { minutes: 30 }) {
