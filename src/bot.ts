@@ -1,4 +1,16 @@
-import { Channel, Client, ClientOptions, GuildMember, Intents, MessageEmbed, Role, Snowflake, User } from 'discord.js';
+import {
+    ApplicationCommandManager,
+    Channel,
+    Client,
+    ClientOptions,
+    GuildApplicationCommandManager,
+    GuildMember,
+    Intents,
+    MessageEmbed,
+    Role,
+    Snowflake,
+    User,
+} from 'discord.js';
 import { CommandConfig, CommandMap, CommandTypeArray } from './commands/config';
 import { CommandSource } from './commands/command-source';
 import { CommandParameters } from './commands/params';
@@ -213,10 +225,81 @@ export abstract class PandaDiscordBot {
     }
 
     /**
-     * Enables receiving slash commands on the bot.
+     * Get the proper command manager this command would belong to.
+     * @param cmd Command to search for.
+     * @returns Command manager the command should belong to.
      */
-    public enableSlashCommands() {
+    protected async getCommandManager(
+        cmd: BaseCommand,
+    ): Promise<GuildApplicationCommandManager | ApplicationCommandManager> {
+        if (cmd.slashGuildId) {
+            const cmdGuild = this.client.guilds.cache.get(cmd.slashGuildId);
+            if (cmdGuild.commands.cache.size === 0) {
+                await cmdGuild.commands.fetch();
+            }
+            return cmdGuild.commands;
+        } else {
+            return this.client.application.commands;
+        }
+    }
+
+    /**
+     * Creates all necessary slash commands from the internal command map.
+     */
+    protected async createSlashCommands() {
+        // Store all global commands in the cache.
+        await this.client.application.commands.fetch();
+
+        // Look through all of the commands that currently exist as slash commands
+        // and delete ones that have been removed from the bot.
+        for (const [id, commandData] of this.client.application.commands.cache) {
+            // This command has been removed altogether, or it has been moved to a guild.
+            const cmd = this.commands.get(commandData.name);
+            if (!cmd || !cmd.isSlashCommand || cmd.slashGuildId) {
+                await this.client.application.commands.delete(commandData);
+            }
+        }
+
+        // We do not currently support deleting commands that previously existed
+        // on a guild (using `slashGuildId`) but have been moved to global.
+        // If you run into this situation, it is best to first run the bot with
+        // the command completely removed, then run it with the command added with
+        // the `slashGuildId` property enabled.
+
+        // Go through every internal command and possibly update its slash command.
+        for (const [name, cmd] of this.commands) {
+            if (cmd.isSlashCommand) {
+                const newData = cmd.commandData();
+                const cmdManager = await this.getCommandManager(cmd);
+
+                // Check if command already exists.
+                // If so, check if it has been updated in any way.
+                const old = cmdManager.cache.find(cmd => cmd.name === name);
+                if (old) {
+                    if (DiscordUtil.slashCommandNeedsUpdate(old, newData)) {
+                        await cmdManager.edit(old, newData);
+                    }
+                } else {
+                    await cmdManager.create(newData);
+                }
+            } else {
+                // Remove command if it exists when it should not.
+                const cmdManager = await this.getCommandManager(cmd);
+                const old = cmdManager.cache.find(cmd => cmd.name === name);
+                if (old) {
+                    await cmdManager.delete(old);
+                }
+            }
+        }
+    }
+
+    /**
+     * Creates and updates slash commands stored in the command map, then
+     * enabled the bot to receive slash commands.
+     */
+    public async createAndEnableSlashCommands() {
         if (!this.slashCommandsEnabled) {
+            await this.createSlashCommands();
             const interactionEvent = new DefaultInteractionCreateEvent(this);
             this.events.set(interactionEvent.name, interactionEvent);
             this.slashCommandsEnabled = true;
