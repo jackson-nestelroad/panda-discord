@@ -41,10 +41,12 @@ export interface PandaOptions {
      * the bot should receive.
      */
     client: ClientOptions;
+
     /**
      * Array of command classes that are created to handle commands.
      */
     commands?: CommandTypeArray;
+
     /**
      * Array of event classes that are used to handle Discord events.
      *
@@ -54,6 +56,7 @@ export interface PandaOptions {
      * fires.
      */
     events?: EventTypeArray;
+
     /**
      * The class that is set up to handle "interactionCreate" events, which is
      * typically used for slash commands.
@@ -62,6 +65,7 @@ export interface PandaOptions {
      * all of the necessary slash commands are created.
      */
     interactionEvent?: new (bot: PandaDiscordBot) => BaseEvent<'interactionCreate'>;
+
     /**
      * Number of cooldown offenses a user has to make before going on timeout.
      *
@@ -70,6 +74,7 @@ export interface PandaOptions {
      * messages and interactions from them.
      */
     cooldownOffensesForTimeout?: number;
+
     /**
      * The user ID of the bot owner. Used for the "Owner" command permission.
      */
@@ -146,8 +151,8 @@ export abstract class PandaDiscordBot {
     public timeoutService?: TimeoutService;
 
     protected options: CompletePandaOptions;
+    protected running: boolean = false;
 
-    private running: boolean = false;
     private slashCommandsEnabled: boolean = false;
 
     public constructor(options: Partial<PandaOptions> = {}) {
@@ -164,26 +169,18 @@ export abstract class PandaDiscordBot {
         }
     }
 
-    private assertRunning(message: string) {
-        if (!this.running) {
-            throw new Error(message);
-        }
-    }
-
     /**
      * The bot's username, as it is currently cached on the Discord client object.
      */
     public get name(): string {
-        this.assertRunning(`PandaDiscordBot.run() must be called before accessing bot name.`);
-        return this.client.user.username;
+        return this.client.user?.username;
     }
 
     /**
      * The bot's avatar URL, as it is currently cached on the Discord client object.
      */
     public get avatarUrl(): string {
-        this.assertRunning(`PandaDiscordBot.run() must be called before accessing bot avatar.`);
-        return this.client.user.avatarURL();
+        return this.client.user?.avatarURL();
     }
 
     /**
@@ -300,7 +297,7 @@ export abstract class PandaDiscordBot {
     public async createAndEnableSlashCommands() {
         if (!this.slashCommandsEnabled) {
             await this.createSlashCommands();
-            const interactionEvent = new DefaultInteractionCreateEvent(this);
+            const interactionEvent = new this.options.interactionEvent(this);
             this.events.set(interactionEvent.name, interactionEvent);
             this.slashCommandsEnabled = true;
         }

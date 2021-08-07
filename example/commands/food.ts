@@ -77,9 +77,9 @@ interface FoodNameArgs {
  * @returns Nested command type for food group.
  */
 function makeSubCommandForFoodGroup(group: FoodGroup): new () => NestedCommand<ExampleBot, SharedFoodData> {
-    const subCommands: CommandTypeArray<ExampleBot, SharedFoodData> = [];
+    const subcommands: CommandTypeArray<ExampleBot, SharedFoodData> = [];
 
-    subCommands.push(
+    subcommands.push(
         class AddSubCommand extends ComplexCommand<ExampleBot, FoodNameArgs, SharedFoodData> {
             public name = 'add';
             public description = 'Adds a food to this group.';
@@ -101,7 +101,7 @@ function makeSubCommandForFoodGroup(group: FoodGroup): new () => NestedCommand<E
         },
     );
 
-    subCommands.push(
+    subcommands.push(
         class RemoveSubCommand extends ComplexCommand<ExampleBot, FoodNameArgs, SharedFoodData> {
             public name = 'remove';
             public description = 'Removes a food from this group.';
@@ -123,7 +123,7 @@ function makeSubCommandForFoodGroup(group: FoodGroup): new () => NestedCommand<E
         },
     );
 
-    subCommands.push(
+    subcommands.push(
         class ListSubCommand extends SimpleCommand<ExampleBot, SharedFoodData> {
             public name = 'list';
             public description = 'Lists all of the food in this group.';
@@ -147,7 +147,7 @@ function makeSubCommandForFoodGroup(group: FoodGroup): new () => NestedCommand<E
 
         public flattenHelpForSubCommands = true;
 
-        public subCommands = subCommands;
+        public subcommands = subcommands;
     };
 }
 
@@ -195,7 +195,7 @@ export class FoodCommand extends NestedCommand<ExampleBot, SharedFoodData> {
         return new SharedFoodData();
     }
 
-    public subCommands = [
+    public subcommands = [
         ...Object.values(FoodGroup).map(group => makeSubCommandForFoodGroup(group)),
         ListAllFoodSubCommand,
         ClearAllFoodSubCommand,

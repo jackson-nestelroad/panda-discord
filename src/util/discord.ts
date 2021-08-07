@@ -1,4 +1,3 @@
-import { ApplicationCommandOptionType } from 'discord-api-types';
 import { ApplicationCommand, ApplicationCommandData, GuildMember, Role, User } from 'discord.js';
 
 export type Mentionable = GuildMember | User | Role;
@@ -93,15 +92,15 @@ export namespace DiscordUtil {
      * Runtime enum type for ApplicationCommandOptionType conversion from string to integer.
      */
     export enum ActualApplicationCommandOptionTypeEnum {
-        SUB_COMMAND = ApplicationCommandOptionType.Subcommand,
-        SUB_COMMAND_GROUP = ApplicationCommandOptionType.SubcommandGroup,
-        STRING = ApplicationCommandOptionType.String,
-        INTEGER = ApplicationCommandOptionType.Integer,
-        BOOLEAN = ApplicationCommandOptionType.Boolean,
-        USER = ApplicationCommandOptionType.User,
-        CHANNEL = ApplicationCommandOptionType.Channel,
-        ROLE = ApplicationCommandOptionType.Role,
-        MENTIONABLE = ApplicationCommandOptionType.Mentionable,
+        SUB_COMMAND = 1,
+        SUB_COMMAND_GROUP = 2,
+        STRING = 3,
+        INTEGER = 4,
+        BOOLEAN = 5,
+        USER = 6,
+        CHANNEL = 7,
+        ROLE = 8,
+        MENTIONABLE = 9,
     }
 
     /**

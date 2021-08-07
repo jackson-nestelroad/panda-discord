@@ -1,4 +1,4 @@
-import { Snowflake } from 'discord-api-types';
+import { Snowflake } from 'discord.js';
 import { CommandInteractionOptionResolver } from 'discord.js';
 import { PandaDiscordBot } from '../bot';
 import { SplitArgumentArray } from '../util/argument-splitter';

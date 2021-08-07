@@ -134,8 +134,8 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
                 if (context.config.choices) {
                     out.value = context.config.choices.find(
                         choice => choice.name.localeCompare(context.value, undefined, { sensitivity: 'accent' }) === 0,
-                    ).value as string;
-                    if (out.value === undefined) {
+                    )?.value as string;
+                    if (out.value === undefined || out.value === null) {
                         out.error = `Invalid value \`${context.value}\` for argument \`${context.name}\`.`;
                     }
                 } else {
@@ -153,8 +153,8 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
                 if (context.config.choices) {
                     out.value = context.config.choices.find(
                         choice => choice.name.localeCompare(context.value, undefined, { sensitivity: 'accent' }) === 0,
-                    ).value as number;
-                    if (out.value === undefined) {
+                    )?.value as number;
+                    if (out.value === undefined || out.value === null) {
                         out.error = `Invalid value \`${context.value}\` for argument \`${context.name}\`.`;
                     }
                 } else {
@@ -260,8 +260,8 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
                 if (context.config.choices) {
                     out.value = context.config.choices.find(
                         choice => choice.name.localeCompare(context.value, undefined, { sensitivity: 'accent' }) === 0,
-                    ).value as number;
-                    if (out.value === undefined) {
+                    )?.value as number;
+                    if (out.value === undefined || out.value === null) {
                         out.error = `Invalid value \`${context.value}\` for argument \`${context.name}\`.`;
                     }
                 } else {

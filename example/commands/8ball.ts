@@ -44,7 +44,6 @@ export class EightBallCommand extends ComplexCommand<ExampleBot, EightBallArgs> 
     ];
 
     public async run({ src }: CommandParameters<ExampleBot>, args: EightBallArgs) {
-        await src.send(args.question);
         await src.send(':8ball: - ' + this.options[Math.floor(Math.random() * this.options.length)]);
     }
 }

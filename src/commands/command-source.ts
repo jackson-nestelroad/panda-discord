@@ -206,7 +206,7 @@ export class CommandSource {
      * Only interactions can be deferred. No-op for messages.
      * @param ephemeral Will the command response be ephemeral?
      */
-    public async defer(ephemeral: boolean = false): Promise<void> {
+    public async deferReply(ephemeral: boolean = false): Promise<void> {
         if (this.isInteraction() && !this.interaction.deferred && !this.interaction.replied) {
             this.deferredEphemeral = ephemeral;
             await this.interaction.deferReply({ ephemeral });

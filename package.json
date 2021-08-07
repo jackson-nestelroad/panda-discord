@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Command framework for building Discord bots with discord.js, allowing chat and slash commands to run through one handler.",
   "author": "jackson-nestelroad",
-  "license": "ISC",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/jackson-nestelroad/panda-discord.git"
@@ -23,7 +23,8 @@
     "build": "npm run format && tsc",
     "format": "prettier --write \"src/**/*.ts\" \"example/**/*.ts\"",
     "version" : "npm run format",
-    "example": "npm run build && node build/example/index"
+    "example": "npm run build && node build/example/index",
+    "prepublish": "npm run build"
   },
   "devDependencies": {
     "prettier": "^2.3.2",

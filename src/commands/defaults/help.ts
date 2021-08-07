@@ -43,7 +43,7 @@ export class HelpCommand extends ComplexCommand<PandaDiscordBot, HelpArgs> {
         map.forEach((cmd, name) => {
             if (cmd.isNested && !cmd.flattenHelpForSubCommands) {
                 nameChain.push(name);
-                this.addCommandsToCommandListByCategory(cmd.subCommandMap, nameChain);
+                this.addCommandsToCommandListByCategory(cmd.subcommandMap, nameChain);
                 nameChain.pop();
             } else {
                 if (CommandCategoryUtil.isPublic(cmd.category)) {
@@ -107,7 +107,7 @@ export class HelpCommand extends ComplexCommand<PandaDiscordBot, HelpArgs> {
                 let cmd = bot.commands.get(queryList[0]);
                 let i = 1;
                 while (cmd && cmd.isNested && i < queryList.length) {
-                    cmd = cmd.subCommandMap.get(queryList[i++]);
+                    cmd = cmd.subcommandMap.get(queryList[i++]);
                 }
 
                 const fullName = queryList.slice(0, i).join(' ');

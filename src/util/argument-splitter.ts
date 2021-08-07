@@ -128,6 +128,14 @@ export class SplitArgumentArray {
     public slice(start?: number, end?: number): SplitArgumentArray {
         return new SplitArgumentArray(this.original, this.args.slice(start, end));
     }
+
+    /**
+     * Returns an empty split argument array with no content or arguments.
+     * @returns Empty array.
+     */
+    static Empty(): SplitArgumentArray {
+        return new SplitArgumentArray('', []);
+    }
 }
 
 /**
