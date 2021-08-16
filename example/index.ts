@@ -3,13 +3,23 @@ import { EvalCommand, HelpCommand, PingCommand } from '../src';
 import { EightBallCommand } from './commands/8ball';
 import { FoodCommand } from './commands/food';
 import { PurgeCommand } from './commands/purge';
+import { RpsCommand } from './commands/rps';
 import { ShowArgsCommand } from './commands/show-args';
 import { ExampleBot } from './example-bot';
 
 (async () => {
     const bot = new ExampleBot({
         owner: '181877391738535936',
-        commands: [PingCommand, HelpCommand, EvalCommand, EightBallCommand, PurgeCommand, FoodCommand, ShowArgsCommand],
+        commands: [
+            PingCommand,
+            HelpCommand,
+            EvalCommand,
+            EightBallCommand,
+            PurgeCommand,
+            FoodCommand,
+            ShowArgsCommand,
+            RpsCommand,
+        ],
         client: {
             intents: [
                 Intents.FLAGS.GUILDS,
