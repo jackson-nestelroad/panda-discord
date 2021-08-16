@@ -116,7 +116,15 @@ export namespace DiscordUtil {
      */
     function deepEqual(a: object, b: object): boolean {
         if (a && b && typeof a === 'object' && typeof b === 'object') {
-            for (const key in a) {
+            // Use the keys in the object with the most keys. We do this to account
+            // for keys that may be set to undefined in one object but not present in
+            // another. Both shoulde evaluate to undefined, but this logic makes sure
+            // no key is overlooked.
+            const keysA = Object.keys(a);
+            const keysB = Object.keys(b);
+            const maxKeys = keysA.length > keysB.length ? keysA : keysB;
+
+            for (const key of maxKeys) {
                 if (!deepEqual(a[key], b[key])) {
                     return false;
                 }
