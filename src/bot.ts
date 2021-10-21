@@ -11,24 +11,25 @@ import {
     Snowflake,
     User,
 } from 'discord.js';
+import { ArgumentSplitter, SplitArgumentArray } from './util/argument-splitter';
 import { CommandConfig, CommandMap, CommandTypeArray } from './commands/config';
-import { CommandSource } from './commands/command-source';
-import { CommandParameters } from './commands/params';
+import { CommandPermissionValidatorConfig, DefaultCommandPermission } from './commands/permission';
+import { DiscordUtil, Mentionable } from './util/discord';
 import { EmbedOptions, EmbedProps, EmbedTemplates } from './embeds/options';
+import { EventConfig, EventMap, EventTypeArray } from './events/config';
+import { ExpireAgeConversion, TimedCache } from './util/timed-cache';
+
+import { BaseCommand } from './commands/base';
 import { BaseEvent } from './events/base';
+import { CommandParameters } from './commands/params';
+import { CommandSource } from './commands/command-source';
 import { DefaultInteractionCreateEvent } from './events/defaults/interaction-create';
 import { DefaultMessageCreateEvent } from './events/defaults/message-create';
-import { MemberListService } from './services/member-list';
-import { TimeoutService } from './services/timeout';
-import { DiscordUtil, Mentionable } from './util/discord';
-import { ExpireAgeConversion, TimedCache } from './util/timed-cache';
-import { EventConfig, EventMap, EventTypeArray } from './events/config';
 import { DefaultReadyEvent } from './events/defaults/ready';
 import { HelpCommand } from './commands/defaults/help';
+import { MemberListService } from './services/member-list';
 import { PingCommand } from './commands/defaults/ping';
-import { CommandPermissionValidatorConfig, DefaultCommandPermission } from './commands/permission';
-import { BaseCommand } from './commands/base';
-import { ArgumentSplitter, SplitArgumentArray } from './util/argument-splitter';
+import { TimeoutService } from './services/timeout';
 
 /**
  * Options for setting up the underlying PandaDiscordBot instance.
@@ -527,23 +528,29 @@ export abstract class PandaDiscordBot {
             if (offenses === undefined) {
                 cooldownSet.set(id, 0);
             } else {
-                if (offenses === 0) {
-                    cooldownSet.update(id, 1);
-                    const slowDownMessage =
-                        cooldownSet.expireAge > 60000
-                            ? `This command can only be run once every ${ExpireAgeConversion.toString(
-                                  cooldownSet.expireAge,
-                              )}.`
-                            : 'Slow down!';
-                    const reply = await src.reply({ content: slowDownMessage, ephemeral: true });
-                    if (reply.isMessage()) {
-                        await this.wait(10000);
-                        await reply.delete();
-                    }
-                } else if (this.timeoutService && offenses >= this.options.cooldownOffensesForTimeout) {
+                if (this.timeoutService && offenses >= this.options.cooldownOffensesForTimeout) {
                     await this.timeoutService.timeout(author);
                 } else {
-                    cooldownSet.update(id, offenses + 1);
+                    if (offenses === 0) {
+                        cooldownSet.update(id, 1);
+                    } else {
+                        cooldownSet.update(id, offenses + 1);
+                    }
+
+                    if (offenses === 0 || src.isInteraction()) {
+                        const slowDownMessage =
+                            cooldownSet.expireAge > 60000
+                                ? `This command can only be run once every ${ExpireAgeConversion.toString(
+                                      cooldownSet.expireAge,
+                                  )}.`
+                                : 'Slow down!';
+
+                        const reply = await src.reply({ content: slowDownMessage, ephemeral: true });
+                        if (reply.isMessage()) {
+                            await this.wait(10000);
+                            await reply.delete();
+                        }
+                    }
                 }
                 return false;
             }
