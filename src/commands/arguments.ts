@@ -7,10 +7,11 @@ import {
     Role,
     User,
 } from 'discord.js';
-import { PandaDiscordBot } from '../bot';
 import { ArgumentSplitter, SplitArgumentArray } from '../util/argument-splitter';
-import { Mentionable } from '../util/discord';
+
 import { ChatCommandParameters } from './params';
+import { Mentionable } from '../util/discord';
+import { PandaDiscordBot } from '../bot';
 
 /**
  * Argument types supported by the internal parser.
@@ -343,10 +344,16 @@ type TypedSingleArgumentConfig<P = unknown> =
     | SingleTypedSingleArgumentConfig<ArgumentType.SplitArguments, P>;
 
 // Parts of the argument config that do not depend on types.
-interface UntypedSingleArgumentConfig {
-    description: string;
-    required: boolean;
-}
+type UntypedSingleArgumentConfig = { description: string } & (
+    | {
+          required: true;
+          hidden?: false;
+      }
+    | {
+          required: false;
+          hidden?: boolean;
+      }
+);
 
 // Configuration for a single argument.
 // This is slightly different than what Discord offers since we handle subcommands differently.

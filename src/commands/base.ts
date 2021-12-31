@@ -1,27 +1,23 @@
-import {
-    ApplicationCommandData,
-    ApplicationCommandOptionType,
-    CommandInteractionOption,
-    MessageEmbed,
-    Snowflake,
-} from 'discord.js';
-import { PandaDiscordBot } from '../bot';
-import { DiscordUtil } from '../util/discord';
-import { ExpireAge, ExpireAgeFormat, TimedCache } from '../util/timed-cache';
+import { ApplicationCommandData, ApplicationCommandOptionType, MessageEmbed, Snowflake } from 'discord.js';
 import {
     ArgumentParserResult,
-    ArgumentsConfig,
     ArgumentType,
     ArgumentTypeConfig,
     ArgumentTypeMetadata,
+    ArgumentsConfig,
     ChatCommandArgumentParsingContext,
     SingleArgumentConfig,
     SingleArgumentTransformer,
 } from './arguments';
-import { DefaultCommandCategory } from './category';
-import { CommandMap, CommandTypeArray } from './config';
 import { ChatCommandParameters, CommandParameters, SlashCommandArgumentLevel, SlashCommandParameters } from './params';
+import { CommandMap, CommandTypeArray } from './config';
+import { ExpireAge, ExpireAgeFormat, TimedCache } from '../util/timed-cache';
+
+import { DefaultCommandCategory } from './category';
 import { DefaultCommandPermission } from './permission';
+import { DiscordUtil } from '../util/discord';
+import { PandaDiscordBot } from '../bot';
+import { SplitArgumentArray } from '../util/argument-splitter';
 
 type ReadonlyDictionary<T> = { readonly [key: string]: T };
 
@@ -451,13 +447,18 @@ abstract class ParameterizedCommand<
         let restOfContentFound = false;
         for (const name in this.args) {
             const data: SingleArgumentConfig = this.args[name];
-            if (restOfContentFound) {
+            if (restOfContentFound && !data.hidden) {
                 this.throwConfigurationError(`RestOfContent arguments must be configured last.`);
             }
             restOfContentFound = data.type === ArgumentType.RestOfContent;
 
-            if (nonRequiredFound && data.required) {
-                this.throwConfigurationError(`Non-required arguments must be configured last.`);
+            if (data.required) {
+                if (nonRequiredFound) {
+                    this.throwConfigurationError(`Non-required arguments must be configured last.`);
+                }
+                if (data.hidden) {
+                    this.throwConfigurationError(`Required arguments cannot be hidden.`);
+                }
             }
 
             nonRequiredFound = !data.required;
@@ -471,15 +472,17 @@ abstract class ParameterizedCommand<
         return {
             name: this.name,
             description: this.description,
-            options: Object.entries(this.args).map(([name, data]: [string, SingleArgumentConfig]) => {
-                return {
-                    name,
-                    description: data.description,
-                    type: ParameterizedCommand.convertArgumentType(data.type),
-                    required: data.required,
-                    choices: data.choices?.length !== 0 ? data.choices : undefined ?? undefined,
-                };
-            }),
+            options: Object.entries(this.args)
+                .filter(([name, data]: [string, SingleArgumentConfig]) => !data.hidden)
+                .map(([name, data]: [string, SingleArgumentConfig]) => {
+                    return {
+                        name,
+                        description: data.description,
+                        type: ParameterizedCommand.convertArgumentType(data.type),
+                        required: data.required,
+                        choices: data.choices?.length !== 0 ? data.choices : undefined ?? undefined,
+                    };
+                }),
             defaultPermission: this.permission === DefaultCommandPermission.Everyone,
         };
     }
@@ -536,6 +539,7 @@ export abstract class ComplexCommand<
 
     public argsString(): string {
         return Object.entries(this.args)
+            .filter(([name, data]: [string, SingleArgumentConfig]) => !data.hidden)
             .map(([name, data]: [string, SingleArgumentConfig]) => {
                 if (!data.required) {
                     return `(${name})`;
@@ -546,6 +550,38 @@ export abstract class ComplexCommand<
             .join(' ');
     }
 
+    private async parseCommandArgument(
+        context: ChatCommandArgumentParsingContext<Bot>,
+    ): Promise<ArgumentParserResult['value']> {
+        const typeConfig: ArgumentTypeMetadata<Bot> = ArgumentTypeConfig[context.config.type];
+
+        // Call the correct parser for the argument type.
+        const result: ArgumentParserResult = {};
+        if (typeConfig.asyncChatParser) {
+            await typeConfig.parsers.chat(context, result);
+        } else {
+            typeConfig.parsers.chat(context, result);
+        }
+        if (result.error && !context.config.hidden && !this.suppressArgumentsError) {
+            throw new Error(result.error);
+        }
+
+        // Transform the argument as configured.
+        if (context.config.transformers) {
+            if (context.config.transformers.any) {
+                (context.config.transformers.any as SingleArgumentTransformer)(result.value, result);
+            } else if (context.config.transformers.chat) {
+                (context.config.transformers.chat as SingleArgumentTransformer)(result.value, result);
+            }
+        }
+        if (result.error && !context.config.hidden && !this.suppressArgumentsError) {
+            throw new Error(result.error);
+        }
+
+        // Assign the parsed value into the resulting object for the commandt to use.
+        return result.value;
+    }
+
     // Parses chat commands to make them appear like slash commands.
     public async runChat(params: ChatCommandParameters<Bot>): Promise<void> {
         // Parse message according to arguments configuration.
@@ -553,9 +589,7 @@ export abstract class ComplexCommand<
         // However, there are a few limitations:
         // Chat arguments are separated by space, while slash arguments are separated by the client.
         // Chat arguments must be listed sequentially, while slash arguments can be out of order.
-        // This allows later optional arguments to be defined while others are not.
-        // Commands should consider this a possibility now.
-        // Later optional commands cannot entirely depend on the presence of previous optional commands.
+        // Chat arguments may be listed out of order if named arguments are enabled on the bot.
         const parsed: Partial<Args> = {};
         const context: ChatCommandArgumentParsingContext<Bot> = {
             value: null,
@@ -564,51 +598,115 @@ export abstract class ComplexCommand<
             i: 0,
             params,
         };
-        for (const entry of Object.entries(this.args)) {
-            // context.name is really of type "keyof T".
-            context.name = entry[0];
-            context.config = entry[1] as SingleArgumentConfig;
-            context.value = params.args.get(context.i);
 
-            const argConfig: SingleArgumentConfig = this.args[context.name as keyof ArgumentsConfig<Args>];
-            const typeConfig: ArgumentTypeMetadata<Bot> = ArgumentTypeConfig[argConfig.type];
+        const cmdArgEntries: [string, SingleArgumentConfig][] = Object.entries(this.args);
 
-            if (context.i >= params.args.length) {
-                if (context.config.required) {
-                    if (!this.suppressArgumentsError) {
-                        throw new Error(`Missing required argument \`${context.name}\`.`);
-                    }
-                } else {
-                    parsed[context.name] = argConfig.default;
+        const botSupportsNamedArgs = !!params.bot.namedArgsPattern;
+
+        // These sets are not needed if the bot does not support named arguments.
+        const requiredArgNames: Set<string> = botSupportsNamedArgs
+            ? new Set(cmdArgEntries.filter(([name, config]) => config.required).map(([name, config]) => name))
+            : undefined;
+        const argsGivenByName: Set<string> = botSupportsNamedArgs ? new Set() : undefined;
+
+        // If supported, extract and process all named arguments first.
+        if (botSupportsNamedArgs) {
+            const { named, unnamed } = params.bot.extractNamedArgs(params.args);
+
+            for (let { name, value } of named) {
+                name = name.toLocaleLowerCase();
+                const config = this.args[name];
+                if (!config) {
+                    // Invalid argument name.
+                    // Ignore it for now, but there could be an option in the future
+                    // that throws an error.
                     continue;
                 }
-            }
+                context.name = name;
+                context.config = config;
+                context.value = value;
+                // We need to fake the args array here in case an argument that uses it shows up.
+                context.i = 0;
+                context.params.args = SplitArgumentArray.Fake(value);
 
-            const result: ArgumentParserResult = {};
-            if (typeConfig.asyncChatParser) {
-                await typeConfig.parsers.chat(context, result);
-            } else {
-                typeConfig.parsers.chat(context, result);
-            }
-            if (result.error && !this.suppressArgumentsError) {
-                throw new Error(result.error);
-            }
+                parsed[name] = await this.parseCommandArgument(context);
 
-            if (argConfig.transformers) {
-                if (argConfig.transformers.any) {
-                    (argConfig.transformers.any as SingleArgumentTransformer)(result.value, result);
-                } else if (argConfig.transformers.chat) {
-                    (argConfig.transformers.chat as SingleArgumentTransformer)(result.value, result);
+                argsGivenByName.add(name);
+                if (config.required) {
+                    requiredArgNames.delete(name);
                 }
             }
 
-            if (result.error && !this.suppressArgumentsError) {
-                throw new Error(result.error);
+            // After all processing is done, overwrite the old args array with the new one that
+            // has no named arguments.
+            // Clearly unnamed arguments override any named ones.
+            context.i = 0;
+            params.args = unnamed;
+        }
+
+        // Index of the next command argument in order.
+        let cmdArgIndex = 0;
+
+        // Loop through all split arguments, without named arguments.
+        for (; context.i < params.args.length && cmdArgIndex < cmdArgEntries.length; ++context.i) {
+            let nextSplitArg = params.args.get(context.i);
+
+            // The next split arg is assigned to the next command arg.
+            let cmdArgEntry = cmdArgEntries[cmdArgIndex];
+
+            // Update the context for the argument parsers.
+            // context.name is really of type "keyof T".
+            context.name = cmdArgEntry[0];
+            context.config = cmdArgEntry[1];
+            context.value = nextSplitArg;
+
+            // Ignore hidden arguments in unnamed arguments.
+            if (context.config.hidden) {
+                continue;
+            } else if (botSupportsNamedArgs && context.config.required) {
+                requiredArgNames.delete(context.name);
             }
 
-            parsed[context.name] = result.value;
-            ++context.i;
+            parsed[context.name] = await this.parseCommandArgument(context);
+
+            ++cmdArgIndex;
         }
+
+        // Assure that all required arguments were given and set default values as necessary.
+
+        if (botSupportsNamedArgs) {
+            if (requiredArgNames.size !== 0) {
+                // Some required arguments never showed up.
+                if (!this.suppressArgumentsError) {
+                    throw new Error(
+                        `Missing required argument${requiredArgNames.size !== 1 ? 's' : ''} ${[...requiredArgNames]
+                            .map(name => `\`${name}\``)
+                            .join(', ')}.`,
+                    );
+                }
+            } else {
+                // There are more arguments that did not appear as in-line arguments, but they may
+                // have appeared as named arguments. If not, assign their default value.
+                for (; cmdArgIndex < cmdArgEntries.length; ++cmdArgIndex) {
+                    const [cmdArgName, cmdArgConfig] = cmdArgEntries[cmdArgIndex];
+                    if (!argsGivenByName.has(cmdArgName)) {
+                        parsed[cmdArgName] = cmdArgConfig.default;
+                    }
+                }
+            }
+        } else {
+            // There are more arguments that surely did not appear, because the bot does not
+            // support named arguments.
+            // This loop assures all arguments left are not required and get their default value.
+            for (; cmdArgIndex < cmdArgEntries.length; ++cmdArgIndex) {
+                const [cmdArgName, cmdArgConfig] = cmdArgEntries[cmdArgIndex];
+                if (cmdArgConfig.required) {
+                    throw new Error(`Missing required argument \`${cmdArgName}\`.`);
+                }
+                parsed[cmdArgName] = cmdArgConfig.default;
+            }
+        }
+
         return this.run(params, parsed as Args);
     }
 }

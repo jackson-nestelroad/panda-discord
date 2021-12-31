@@ -1,6 +1,6 @@
 import {
-    ArgumentsConfig,
     ArgumentType,
+    ArgumentsConfig,
     CommandParameters,
     ComplexCommand,
     PandaDiscordBot,
@@ -21,6 +21,7 @@ interface RpsChoiceConfig {
 
 interface RpsArgs {
     choice: RpsChoice;
+    win: boolean;
 }
 
 export class RpsCommand extends ComplexCommand<PandaDiscordBot, RpsArgs> {
@@ -56,6 +57,12 @@ export class RpsCommand extends ComplexCommand<PandaDiscordBot, RpsArgs> {
                 { name: 'Scissors', value: RpsChoice.Scissors },
             ],
         },
+        win: {
+            description: 'Force a win.',
+            type: ArgumentType.Boolean,
+            required: false,
+            hidden: true,
+        },
     };
 
     private chooseOptionForBot(): RpsChoice {
@@ -69,7 +76,9 @@ export class RpsCommand extends ComplexCommand<PandaDiscordBot, RpsArgs> {
             throw new Error(`Missing config for valid option: \`${args.choice}\`.`);
         }
 
-        const botChoice = this.chooseOptionForBot();
+        const botChoice = args.win
+            ? (choice.beats.keys().next().value as RpsChoice) ?? this.chooseOptionForBot()
+            : this.chooseOptionForBot();
 
         const reply = `You chose **${RpsChoice[args.choice]}**. I chose **${RpsChoice[botChoice]}**.`;
         let result: string;

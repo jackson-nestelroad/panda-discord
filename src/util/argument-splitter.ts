@@ -19,12 +19,14 @@ export class SplitArgument {
     public readonly content: string;
 
     private readonly type: GroupType;
-    private readonly originalIndex: number;
+    private readonly beginIndex: number;
+    private readonly endIndex: number;
 
-    public constructor(content: string, type: GroupType, originalIndex: number) {
+    public constructor(content: string, type: GroupType, beginIndex: number, endIndex: number) {
         this.content = content;
         this.type = type;
-        this.originalIndex = originalIndex;
+        this.beginIndex = beginIndex;
+        this.endIndex = endIndex;
     }
 
     /**
@@ -85,6 +87,15 @@ export class SplitArgumentArray {
     }
 
     /**
+     * Creates a fake `SplitArgumentArray` around the given string.
+     * @param value Single string to use as an argument.
+     * @returns `SplitArgumentArray` with a single argument.
+     */
+    public static Fake(value: string): SplitArgumentArray {
+        return new SplitArgumentArray(value, [new SplitArgument(value, GroupType.None, 0, value.length)]);
+    }
+
+    /**
      * Number of arguments.
      */
     public get length(): number {
@@ -101,6 +112,47 @@ export class SplitArgumentArray {
     }
 
     /**
+     * Removes the argument at the given index from the array, creating a new array.
+     * @param i Index of argument to remove.
+     * @returns New array with argument removed.
+     */
+    public remove(i: number): SplitArgumentArray {
+        if (i >= this._args.length) {
+            return;
+        }
+
+        // Removing the first argument, same as shift.
+        if (i === 0) {
+            this.shift();
+            return this;
+        }
+
+        // Squish the internal string together so that the next group (if it exists)
+        // and the previous group touch each other.
+
+        // Surely a valid element, given we checked for 0 already.
+        const endThisGroup = this._args[i]['endIndex'];
+        const endPrevGroup = this._args[i - 1]['endIndex'];
+
+        const squished = this.original.substr(0, endPrevGroup) + this.original.substr(endThisGroup);
+
+        // All args before the removed index are valid, but all args after the removed index
+        // are offset by the length of the removed chunk. Fix them before returning.
+        const removedChunkLength = endThisGroup - endPrevGroup;
+        return new SplitArgumentArray(squished.trim(), [
+            ...this._args.slice(0, i),
+            ...this._args.slice(i + 1).map(arg => {
+                return new SplitArgument(
+                    arg.content,
+                    arg['type'],
+                    arg['beginIndex'] - removedChunkLength,
+                    arg['endIndex'] - removedChunkLength,
+                );
+            }),
+        ]);
+    }
+
+    /**
      * Restores the arguments into a string from the given index.
      * @param start Index to start from.
      * @param end Index (exclusive) to end the restored string.
@@ -108,7 +160,7 @@ export class SplitArgumentArray {
      * of the string.
      */
     public restore(start: number, end?: number): string {
-        return this.original.substring(this.args[start]?.['originalIndex'], this.args[end]?.['originalIndex']);
+        return this.original.substring(this.args[start]?.['beginIndex'], this.args[end]?.['beginIndex']);
     }
 
     /**
@@ -162,10 +214,11 @@ export class ArgumentSplitter {
      * Pushes the next argument into the result array as a complete argument.
      *
      * Empty strings are only pushed if they are encapsulated in some group.
+     * @param end Index (exclusive) where group ends.
      */
-    private pushArg(): void {
+    private pushArg(end: number): void {
         if (this.next || (this.group !== GroupType.None && this.group !== GroupType.New)) {
-            this.args.push(new SplitArgument(this.next, this.group, this.startOfCurrentGroup));
+            this.args.push(new SplitArgument(this.next, this.group, this.startOfCurrentGroup, end));
             this.next = '';
         }
         this.group = GroupType.New;
@@ -212,7 +265,7 @@ export class ArgumentSplitter {
                 if (this.group === GroupType.DoubleQuote) {
                     if (!this.escaped) {
                         // End of the current argument group.
-                        this.pushArg();
+                        this.pushArg(i + 1);
                     } else {
                         // Quote is escaped, just a normal char.
                         this.appendChar(char, i);
@@ -220,7 +273,7 @@ export class ArgumentSplitter {
                 } else if (this.group === GroupType.New || this.group === GroupType.None) {
                     if (!this.escaped) {
                         // Start of a new argument group.
-                        this.pushArg();
+                        this.pushArg(i);
                         this.newGroup(GroupType.DoubleQuote, i);
                     } else {
                         // Quote is escaped, just a normal char.
@@ -240,7 +293,7 @@ export class ArgumentSplitter {
             case '\v':
                 if (this.group === GroupType.None || this.group === GroupType.New) {
                     // No group, so whitespace is the separator.
-                    this.pushArg();
+                    this.pushArg(i);
                 } else {
                     // In a group, so whitespace is a normal char.
                     this.appendChar(char, i);
@@ -249,7 +302,7 @@ export class ArgumentSplitter {
             // Empty character signals the end.
             case '':
                 if (this.group === GroupType.None) {
-                    this.pushArg();
+                    this.pushArg(i);
                 }
                 break;
             // Everything else, including backticks that made it here.
@@ -285,7 +338,7 @@ export class ArgumentSplitter {
         // When this is 0, this loop will never run and no extra arguments will be created.
         for (let j = 0; j < completeGroups; ++j, lookbackIndex += this.maxBackticksToFormAGroup * 2) {
             this.newGroup(GroupType.CodeBacktick, lookbackIndex);
-            this.pushArg();
+            this.pushArg(lookbackIndex + this.maxBackticksToFormAGroup * 2);
         }
 
         // Record how many backticks start the current group so we can match them in the end.
@@ -327,7 +380,7 @@ export class ArgumentSplitter {
                 // Notice that this.group is being set at the same time that this.backticks.past is nonzero.
 
                 // Push whatever was existing before the new group.
-                this.pushArg();
+                this.pushArg(i);
                 // Set group after push.
                 this.group = GroupType.CodeBacktick;
                 this.handleExtraBackticks(i);
@@ -350,7 +403,7 @@ export class ArgumentSplitter {
                     // We surely have enough backticks to match the group, so count those off.
                     this.backticks.present -= this.backticks.past;
                     // Push whatever is in the group.
-                    this.pushArg();
+                    this.pushArg(i - this.backticks.present);
                     this.handleExtraBackticks(i);
 
                     if (this.group === GroupType.CodeBacktick) {

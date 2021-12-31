@@ -38,6 +38,7 @@ export { TimeoutService } from './services/timeout';
 export { ArgumentSplitter, ArgumentSplitterError, SplitArgument, SplitArgumentArray } from './util/argument-splitter';
 export { DiscordCodeMarkup, DiscordUtil, Mentionable } from './util/discord';
 export { EvalUtil } from './util/eval';
+export { NamedArgumentPattern, NamedArgument, ExtractedArgs } from './util/named-arguments';
 export {
     TimedCacheEntry,
     ExpireAgeFormat,

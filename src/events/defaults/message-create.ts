@@ -1,9 +1,10 @@
 import { Message, Snowflake } from 'discord.js';
-import { PandaDiscordBot } from '../../bot';
-import { CommandSource } from '../../commands/command-source';
-import { ChatCommandParameters } from '../../commands/params';
-import { SplitArgumentArray } from '../../util/argument-splitter';
+
 import { BaseEvent } from '../base';
+import { ChatCommandParameters } from '../../commands/params';
+import { CommandSource } from '../../commands/command-source';
+import { PandaDiscordBot } from '../../bot';
+import { SplitArgumentArray } from '../../util/argument-splitter';
 
 /**
  * Default event handler for messages.

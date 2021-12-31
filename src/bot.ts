@@ -18,6 +18,12 @@ import { DiscordUtil, Mentionable } from './util/discord';
 import { EmbedOptions, EmbedProps, EmbedTemplates } from './embeds/options';
 import { EventConfig, EventMap, EventTypeArray } from './events/config';
 import { ExpireAgeConversion, TimedCache } from './util/timed-cache';
+import {
+    ExtractedArgs,
+    NamedArgumentPattern,
+    extractNamedArgs,
+    validateNamedArgsPattern,
+} from './util/named-arguments';
 
 import { BaseCommand } from './commands/base';
 import { BaseEvent } from './events/base';
@@ -101,6 +107,23 @@ export interface PandaDiscordBot {
      * the bot.
      */
     readonly permissionValidators?: CommandPermissionValidatorConfig<this>;
+
+    /**
+     * If an object is given, named arguments are enabled when prefixed with the
+     * given string. If no object is given, named arguments are disabled.
+     *
+     * For example, `namedArgsPattern = { prefix: '--', separator: '=' };`
+     * allows the following:
+     *
+     *      `>purge @user 50 #general`
+     *
+     *      `>purge @user --channel=#general`
+     *
+     *      `>purge @user --count=50`
+     *
+     *      `>purge @user --count=50 --channel=#general`
+     */
+    readonly namedArgsPattern?: NamedArgumentPattern;
 }
 
 /**
@@ -167,6 +190,12 @@ export abstract class PandaDiscordBot {
         this.options = {} as CompletePandaOptions;
         for (const key in defaultOptions) {
             this.options[key] = options[key] ?? defaultOptions[key];
+        }
+    }
+
+    private validateInternalAttributes() {
+        if (this.namedArgsPattern) {
+            validateNamedArgsPattern(this.namedArgsPattern);
         }
     }
 
@@ -339,6 +368,24 @@ export abstract class PandaDiscordBot {
     public splitIntoArgs(str: string): SplitArgumentArray {
         const splitter = new ArgumentSplitter();
         return splitter.split(str);
+    }
+
+    /**
+     * Extracts named arguments to be processed separately.
+     * @param args Split arguments array.
+     * @param pattern Pattern to detect named arguments by. Defaults to
+     * the pattern set on the bot.
+     * @returns An array of named arguments and the leftover unnamed arguments.
+     */
+    public extractNamedArgs(
+        args: SplitArgumentArray,
+        pattern: NamedArgumentPattern = this.namedArgsPattern,
+    ): ExtractedArgs {
+        if (!pattern) {
+            throw new Error(`Named argument pattern required for extraction.`);
+        }
+
+        return extractNamedArgs(args, pattern);
     }
 
     /**
@@ -579,6 +626,7 @@ export abstract class PandaDiscordBot {
      */
     public async run(token: string) {
         try {
+            this.validateInternalAttributes();
             this.setDefaultPermissionValidators();
             if (this.initialize) {
                 await this.initialize();

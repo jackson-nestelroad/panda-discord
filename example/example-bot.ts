@@ -1,4 +1,3 @@
-import { Snowflake } from 'discord.js';
 import {
     CommandPermissionValidatorConfig,
     DefaultCommandCategory,
@@ -7,6 +6,8 @@ import {
     PandaDiscordBot,
     TimeoutService,
 } from '../src/index';
+
+import { Snowflake } from 'discord.js';
 
 export const CommandPermission = {
     ...DefaultCommandPermission,
@@ -34,6 +35,8 @@ export class ExampleBot extends PandaDiscordBot {
             return member.roles.cache.find(role => role.name === 'Moderator') !== undefined;
         },
     };
+
+    public namedArgsPattern = { prefix: '--', separator: '=' };
 
     public memberListService: MemberListService = new MemberListService(this);
     public timeoutService: TimeoutService = new TimeoutService(this);

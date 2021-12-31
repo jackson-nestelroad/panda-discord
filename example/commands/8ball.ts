@@ -1,8 +1,15 @@
-import { ArgumentsConfig, ArgumentType, CommandParameters, ComplexCommand, StandardCooldowns } from '../../src';
+import { ArgumentType, ArgumentsConfig, CommandParameters, ComplexCommand, StandardCooldowns } from '../../src';
 import { CommandCategory, CommandPermission, ExampleBot } from '../example-bot';
+
+enum EightBallResponse {
+    Positive,
+    Neutral,
+    Negative,
+}
 
 interface EightBallArgs {
     question?: string;
+    response?: EightBallResponse;
 }
 
 export class EightBallCommand extends ComplexCommand<ExampleBot, EightBallArgs> {
@@ -17,6 +24,17 @@ export class EightBallCommand extends ComplexCommand<ExampleBot, EightBallArgs> 
             description: 'Question to ask.',
             type: ArgumentType.RestOfContent,
             required: false,
+        },
+        response: {
+            description: 'Type of response',
+            type: ArgumentType.Integer,
+            required: false,
+            hidden: true,
+            choices: [
+                { name: 'Positive', value: EightBallResponse.Positive },
+                { name: 'Neutral', value: EightBallResponse.Neutral },
+                { name: 'Negative', value: EightBallResponse.Negative },
+            ],
         },
     };
 
@@ -44,6 +62,25 @@ export class EightBallCommand extends ComplexCommand<ExampleBot, EightBallArgs> 
     ];
 
     public async run({ src }: CommandParameters<ExampleBot>, args: EightBallArgs) {
-        await src.send(':8ball: - ' + this.options[Math.floor(Math.random() * this.options.length)]);
+        let start = 0;
+        let length = this.options.length;
+        if (args.response !== undefined) {
+            switch (args.response) {
+                case EightBallResponse.Positive:
+                    start = 0;
+                    length = 10;
+                    break;
+                case EightBallResponse.Neutral:
+                    start = 10;
+                    length = 5;
+                    break;
+                case EightBallResponse.Neutral:
+                    start = 15;
+                    length = 5;
+                    break;
+            }
+        }
+        const response = this.options[start + Math.floor(Math.random() * length)];
+        await src.send(':8ball: - ' + response);
     }
 }

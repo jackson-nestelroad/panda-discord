@@ -1,11 +1,12 @@
-import { PandaDiscordBot } from '../../bot';
-import { ExpireAgeConversion } from '../../util/timed-cache';
-import { ArgumentsConfig, ArgumentType } from '../arguments';
-import { ComplexCommand, StandardCooldowns } from '../base';
+import { ArgumentType, ArgumentsConfig } from '../arguments';
 import { CommandCategoryUtil, DefaultCommandCategory } from '../category';
+import { ComplexCommand, StandardCooldowns } from '../base';
+
 import { CommandMap } from '../config';
 import { CommandParameters } from '../params';
 import { DefaultCommandPermission } from '../permission';
+import { ExpireAgeConversion } from '../../util/timed-cache';
+import { PandaDiscordBot } from '../../bot';
 
 interface HelpArgs {
     query?: string;
@@ -122,10 +123,9 @@ export class HelpCommand extends ComplexCommand<PandaDiscordBot, HelpArgs> {
                         true,
                     );
                     if (cmd.args) {
-                        const argumentsField: string[] = [];
-                        for (const [name, data] of Object.entries(cmd.args)) {
-                            argumentsField.push(`\`${name}\` - ${data.description}`);
-                        }
+                        const argumentsField: string[] = Object.entries(cmd.args)
+                            .filter(([name, data]) => !data.hidden)
+                            .map(([name, data]) => `\`${name}\` - ${data.description}`);
                         embed.addField('Arguments', argumentsField.join('\n'), true);
                     }
                     if (cmd.addHelpFields) {
