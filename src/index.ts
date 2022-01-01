@@ -1,4 +1,4 @@
-export { PandaDiscordBot, PandaOptions } from './bot';
+export { PandaDiscordBot, PandaOptions, NamedArgsOption } from './bot';
 export {
     ArgumentType,
     ArgumentParserResult,

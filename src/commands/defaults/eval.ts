@@ -1,12 +1,14 @@
-import { PandaDiscordBot } from '../../bot';
+import * as DiscordJS from 'discord.js';
+
+import { ArgumentType, ArgumentsConfig } from '../arguments';
+import { ChatCommandParameters, CommandParameters } from '../params';
+import { ComplexCommand, LegacyCommand } from '../base';
+
+import { DefaultCommandCategory } from '../category';
+import { DefaultCommandPermission } from '../permission';
 import { DiscordUtil } from '../../util/discord';
 import { EvalUtil } from '../../util/eval';
-import { ArgumentsConfig, ArgumentType } from '../arguments';
-import { LegacyCommand } from '../base';
-import { DefaultCommandCategory } from '../category';
-import { ChatCommandParameters, CommandParameters } from '../params';
-import { DefaultCommandPermission } from '../permission';
-import * as DiscordJS from 'discord.js';
+import { PandaDiscordBot } from '../../bot';
 
 interface EvalArgs {
     code: string;
@@ -14,7 +16,7 @@ interface EvalArgs {
 }
 
 // This command is heavily unsafe, use at your own risk
-export class EvalCommand extends LegacyCommand<PandaDiscordBot, EvalArgs> {
+export class EvalCommand extends ComplexCommand<PandaDiscordBot, EvalArgs> {
     public name = 'eval';
     public description = 'Executes arbitrary JavaScript and returns the result. Be careful!';
     public category = DefaultCommandCategory.Secret;
@@ -23,39 +25,23 @@ export class EvalCommand extends LegacyCommand<PandaDiscordBot, EvalArgs> {
     public disableSlash = true;
 
     public args: ArgumentsConfig<EvalArgs> = {
-        silent: {
-            description: 'Silence result output?',
-            type: ArgumentType.Boolean,
-            required: true,
-        },
         code: {
             description: 'Code to run. May be put in a code line or code block.',
             type: ArgumentType.RestOfContent,
             required: true,
         },
+        silent: {
+            description: 'Silence result output?',
+            type: ArgumentType.Boolean,
+            required: false,
+            named: true,
+            default: false,
+        },
     };
-
-    public argsString(): string {
-        return '(silent?) code';
-    }
 
     public readonly silentArg = 'silent';
     public readonly maxLength = 1900;
     public sensitivePattern: RegExp = null;
-
-    public parseChatArgs({ bot, args, content }: ChatCommandParameters): EvalArgs {
-        const parsed: Partial<EvalArgs> = {};
-
-        if (args[0] === this.silentArg) {
-            parsed.silent = true;
-            parsed.code = content.substr(this.silentArg.length).trimLeft();
-        } else {
-            parsed.silent = false;
-            parsed.code = content;
-        }
-
-        return parsed as EvalArgs;
-    }
 
     public async run(params: CommandParameters, args: EvalArgs) {
         const { bot, src } = params;

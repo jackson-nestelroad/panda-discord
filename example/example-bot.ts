@@ -36,8 +36,6 @@ export class ExampleBot extends PandaDiscordBot {
         },
     };
 
-    public namedArgsPattern = { prefix: '--', separator: '=' };
-
     public memberListService: MemberListService = new MemberListService(this);
     public timeoutService: TimeoutService = new TimeoutService(this);
 

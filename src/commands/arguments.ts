@@ -344,16 +344,12 @@ type TypedSingleArgumentConfig<P = unknown> =
     | SingleTypedSingleArgumentConfig<ArgumentType.SplitArguments, P>;
 
 // Parts of the argument config that do not depend on types.
-type UntypedSingleArgumentConfig = { description: string } & (
-    | {
-          required: true;
-          hidden?: false;
-      }
-    | {
-          required: false;
-          hidden?: boolean;
-      }
-);
+interface UntypedSingleArgumentConfig {
+    description: string;
+    required: boolean;
+    named?: boolean;
+    hidden?: boolean;
+}
 
 // Configuration for a single argument.
 // This is slightly different than what Discord offers since we handle subcommands differently.

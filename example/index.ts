@@ -1,11 +1,12 @@
-import { Intents } from 'discord.js';
-import { EvalCommand, HelpCommand, PingCommand } from '../src';
+import { EvalCommand, HelpCommand, NamedArgsOption, PingCommand } from '../src';
+
 import { EightBallCommand } from './commands/8ball';
+import { ExampleBot } from './example-bot';
 import { FoodCommand } from './commands/food';
+import { Intents } from 'discord.js';
 import { PurgeCommand } from './commands/purge';
 import { RpsCommand } from './commands/rps';
 import { ShowArgsCommand } from './commands/show-args';
-import { ExampleBot } from './example-bot';
 
 (async () => {
     const bot = new ExampleBot({
@@ -28,6 +29,7 @@ import { ExampleBot } from './example-bot';
                 Intents.FLAGS.DIRECT_MESSAGES,
             ],
         },
+        namedArgs: NamedArgsOption.IfNeeded,
     });
     await bot.run('TOKEN_HERE');
 })().catch(error => {

@@ -16,6 +16,7 @@ import { ExpireAge, ExpireAgeFormat, TimedCache } from '../util/timed-cache';
 import { DefaultCommandCategory } from './category';
 import { DefaultCommandPermission } from './permission';
 import { DiscordUtil } from '../util/discord';
+import { NamedArgsOption } from '..';
 import { PandaDiscordBot } from '../bot';
 import { SplitArgumentArray } from '../util/argument-splitter';
 
@@ -287,7 +288,7 @@ export abstract class BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot,
     /**
      * Generates symbolic form of command arguments for the help page.
      */
-    public abstract argsString(): string;
+    public abstract argsString(bot: Bot): string;
 
     /**
      * Generates data to be used for slash command configuration.
@@ -376,7 +377,7 @@ export abstract class SimpleCommand<Bot extends PandaDiscordBot, Shared = never>
      */
     public abstract run(params: CommandParameters<Bot>): Promise<void>;
 
-    public argsString(): string {
+    public argsString(bot: Bot): string {
         return '';
     }
 
@@ -418,6 +419,9 @@ abstract class ParameterizedCommand<
     // Stronger typing for the args configuration.
     public abstract readonly args: ArgumentsConfig<Args>;
 
+    // Does the bot use named arguments?
+    private usesNamedArgs: boolean = false;
+
     /**
      * Generalized command handler for chat and slash commands.
      * @param params Command parameters.
@@ -438,30 +442,53 @@ abstract class ParameterizedCommand<
         }
     }
 
-    // Validates the arguments config object is possible to use.
+    // Validates that the arguments config object is possible to use.
     private validateArgumentConfig(): void {
-        // Non-required arguments must be listed last (consecutively).
-        // RestOfContent argument can only be at the very end.
+        // Enforces the following ordering:
+        //  1. Required arguments.
+        //  2. Optional arguments.
+        //  3. Rest-of-content argument.
+        // Named and hidden arguments can be scattered throughout in any way, as long
+        // as they are not marked as required.
 
-        let nonRequiredFound = false;
-        let restOfContentFound = false;
-        for (const name in this.args) {
-            const data: SingleArgumentConfig = this.args[name];
-            if (restOfContentFound && !data.hidden) {
-                this.throwConfigurationError(`RestOfContent arguments must be configured last.`);
-            }
-            restOfContentFound = data.type === ArgumentType.RestOfContent;
+        const state = {
+            required: true,
+            restOfContent: false,
+        };
 
-            if (data.required) {
-                if (nonRequiredFound) {
-                    this.throwConfigurationError(`Non-required arguments must be configured last.`);
+        const argEntries: [string, SingleArgumentConfig][] = Object.entries(this.args);
+        for (const [name, config] of argEntries) {
+            if (config.named) {
+                this.usesNamedArgs = true;
+                if (config.hidden && config.required) {
+                    this.throwConfigurationError('Hidden arguments cannot be required.');
                 }
-                if (data.hidden) {
-                    this.throwConfigurationError(`Required arguments cannot be hidden.`);
+                // These arguments can be placed in any order.
+                if (!config.required) {
+                    continue;
                 }
+            } else if (config.hidden) {
+                this.throwConfigurationError('Hidden arguments must be marked as named arguments.');
             }
 
-            nonRequiredFound = !data.required;
+            // The following logic trivially holds only for non-named arguments and required named arguments.
+
+            const isRestOfContent =
+                !config.named &&
+                (config.type === ArgumentType.RestOfContent || config.type === ArgumentType.SplitArguments);
+
+            if (!state.required && config.required) {
+                // Optional argument comes after some required argument.
+                this.throwConfigurationError('Optional arguments must be configured last.');
+            } else if (state.restOfContent) {
+                // Rest-of-content argument already found.
+                this.throwConfigurationError(
+                    'Non-named arguments that use the rest of content must be configured last.',
+                );
+            }
+
+            state.required &&= config.required;
+            state.restOfContent ||= isRestOfContent;
         }
     }
 
@@ -473,14 +500,14 @@ abstract class ParameterizedCommand<
             name: this.name,
             description: this.description,
             options: Object.entries(this.args)
-                .filter(([name, data]: [string, SingleArgumentConfig]) => !data.hidden)
-                .map(([name, data]: [string, SingleArgumentConfig]) => {
+                .filter(([name, config]: [string, SingleArgumentConfig]) => !config.hidden)
+                .map(([name, config]: [string, SingleArgumentConfig]) => {
                     return {
                         name,
-                        description: data.description,
-                        type: ParameterizedCommand.convertArgumentType(data.type),
-                        required: data.required,
-                        choices: data.choices?.length !== 0 ? data.choices : undefined ?? undefined,
+                        description: config.description,
+                        type: ParameterizedCommand.convertArgumentType(config.type),
+                        required: config.required,
+                        choices: config.choices?.length !== 0 ? config.choices : undefined ?? undefined,
                     };
                 }),
             defaultPermission: this.permission === DefaultCommandPermission.Everyone,
@@ -537,16 +564,10 @@ export abstract class ComplexCommand<
 > extends ParameterizedCommand<Bot, Args, Shared> {
     public isNested: false = false;
 
-    public argsString(): string {
+    public argsString(bot: Bot): string {
         return Object.entries(this.args)
-            .filter(([name, data]: [string, SingleArgumentConfig]) => !data.hidden)
-            .map(([name, data]: [string, SingleArgumentConfig]) => {
-                if (!data.required) {
-                    return `(${name})`;
-                } else {
-                    return name;
-                }
-            })
+            .filter(([name, config]: [string, SingleArgumentConfig]) => !config.hidden)
+            .map(([name, config]: [string, SingleArgumentConfig]) => bot.argString(name, config))
             .join(' ');
     }
 
@@ -589,7 +610,7 @@ export abstract class ComplexCommand<
         // However, there are a few limitations:
         // Chat arguments are separated by space, while slash arguments are separated by the client.
         // Chat arguments must be listed sequentially, while slash arguments can be out of order.
-        // Chat arguments may be listed out of order if named arguments are enabled on the bot.
+        // Named arguments are the exception to the above rule, as they can be given in any order.
         const parsed: Partial<Args> = {};
         const context: ChatCommandArgumentParsingContext<Bot> = {
             value: null,
@@ -601,25 +622,35 @@ export abstract class ComplexCommand<
 
         const cmdArgEntries: [string, SingleArgumentConfig][] = Object.entries(this.args);
 
-        const botSupportsNamedArgs = !!params.bot.namedArgsPattern;
+        let parseNamedArgs: boolean;
+        switch (params.bot.options.namedArgs) {
+            case NamedArgsOption.Always:
+                parseNamedArgs = true;
+                break;
+            case NamedArgsOption.Never:
+                parseNamedArgs = false;
+                break;
+            case NamedArgsOption.IfNeeded:
+                parseNamedArgs = this['usesNamedArgs'];
+                break;
+        }
 
-        // These sets are not needed if the bot does not support named arguments.
-        const requiredArgNames: Set<string> = botSupportsNamedArgs
+        // These sets are not needed if we are not parsing named arguments.
+        const requiredArgNames: Set<string> = parseNamedArgs
             ? new Set(cmdArgEntries.filter(([name, config]) => config.required).map(([name, config]) => name))
             : undefined;
-        const argsGivenByName: Set<string> = botSupportsNamedArgs ? new Set() : undefined;
+        const argsGivenByName: Set<string> = parseNamedArgs ? new Set() : undefined;
 
         // If supported, extract and process all named arguments first.
-        if (botSupportsNamedArgs) {
+        if (parseNamedArgs) {
             const { named, unnamed } = params.bot.extractNamedArgs(params.args);
 
             for (let { name, value } of named) {
                 name = name.toLocaleLowerCase();
                 const config = this.args[name];
                 if (!config) {
-                    // Invalid argument name.
-                    // Ignore it for now, but there could be an option in the future
-                    // that throws an error.
+                    // Unknown argument name.
+                    params.extraArgs[name] = value;
                     continue;
                 }
                 context.name = name;
@@ -660,21 +691,21 @@ export abstract class ComplexCommand<
             context.config = cmdArgEntry[1];
             context.value = nextSplitArg;
 
-            // Ignore hidden arguments in unnamed arguments.
-            if (context.config.hidden) {
-                continue;
-            } else if (botSupportsNamedArgs && context.config.required) {
-                requiredArgNames.delete(context.name);
-            }
+            // Only parse if the current argument being read is not named.
+            if (!context.config.hidden && !context.config.named) {
+                parsed[context.name] = await this.parseCommandArgument(context);
 
-            parsed[context.name] = await this.parseCommandArgument(context);
+                if (parseNamedArgs && context.config.required) {
+                    requiredArgNames.delete(context.name);
+                }
+            }
 
             ++cmdArgIndex;
         }
 
         // Assure that all required arguments were given and set default values as necessary.
 
-        if (botSupportsNamedArgs) {
+        if (parseNamedArgs) {
             if (requiredArgNames.size !== 0) {
                 // Some required arguments never showed up.
                 if (!this.suppressArgumentsError) {
@@ -685,7 +716,7 @@ export abstract class ComplexCommand<
                     );
                 }
             } else {
-                // There are more arguments that did not appear as in-line arguments, but they may
+                // There are more arguments that did not appear as unnamed arguments, but they may
                 // have appeared as named arguments. If not, assign their default value.
                 for (; cmdArgIndex < cmdArgEntries.length; ++cmdArgIndex) {
                     const [cmdArgName, cmdArgConfig] = cmdArgEntries[cmdArgIndex];
@@ -701,7 +732,13 @@ export abstract class ComplexCommand<
             for (; cmdArgIndex < cmdArgEntries.length; ++cmdArgIndex) {
                 const [cmdArgName, cmdArgConfig] = cmdArgEntries[cmdArgIndex];
                 if (cmdArgConfig.required) {
-                    throw new Error(`Missing required argument \`${cmdArgName}\`.`);
+                    if (cmdArgConfig.named) {
+                        throw new Error(
+                            `Missing required named argument \`${cmdArgName}\`, but named argument parsing is turned off! This command is impossible to run.`,
+                        );
+                    } else {
+                        throw new Error(`Missing required argument \`${cmdArgName}\`.`);
+                    }
                 }
                 parsed[cmdArgName] = cmdArgConfig.default;
             }
@@ -757,7 +794,7 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
     // Actual subcommand map to delegate commands to.
     public subcommandMap: CommandMap<string, Bot, Shared>;
 
-    public argsString() {
+    public argsString(bot: Bot) {
         return `(${[...this.subcommandMap.keys()].join(' | ')})`;
     }
 

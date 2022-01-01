@@ -61,6 +61,7 @@ export class RpsCommand extends ComplexCommand<PandaDiscordBot, RpsArgs> {
             description: 'Force a win.',
             type: ArgumentType.Boolean,
             required: false,
+            named: true,
             hidden: true,
         },
     };

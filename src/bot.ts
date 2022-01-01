@@ -12,6 +12,7 @@ import {
     User,
 } from 'discord.js';
 import { ArgumentSplitter, SplitArgumentArray } from './util/argument-splitter';
+import { ArgumentType, SingleArgumentConfig } from './commands/arguments';
 import { CommandConfig, CommandMap, CommandTypeArray } from './commands/config';
 import { CommandPermissionValidatorConfig, DefaultCommandPermission } from './commands/permission';
 import { DiscordUtil, Mentionable } from './util/discord';
@@ -36,6 +37,24 @@ import { HelpCommand } from './commands/defaults/help';
 import { MemberListService } from './services/member-list';
 import { PingCommand } from './commands/defaults/ping';
 import { TimeoutService } from './services/timeout';
+
+/**
+ * Option for using named arguments on the bot.
+ */
+export enum NamedArgsOption {
+    /**
+     * Never use named arguments, disabling them completely.
+     */
+    Never,
+    /**
+     * Only parse named arguments if the current command uses them.
+     */
+    IfNeeded,
+    /**
+     * Always parse named arguments, regardless of if they are used or not.
+     */
+    Always,
+}
 
 /**
  * Options for setting up the underlying PandaDiscordBot instance.
@@ -86,6 +105,11 @@ export interface PandaOptions {
      * The user ID of the bot owner. Used for the "Owner" command permission.
      */
     owner?: Snowflake;
+
+    /**
+     * Specifies how the bot should handle arguments in the form `--arg=value`.
+     */
+    namedArgs?: NamedArgsOption;
 }
 
 type CompletePandaOptions = { [option in keyof PandaOptions]-?: PandaOptions[option] };
@@ -99,6 +123,7 @@ const defaultOptions: CompletePandaOptions = {
     interactionEvent: DefaultInteractionCreateEvent,
     cooldownOffensesForTimeout: 5,
     owner: null,
+    namedArgs: NamedArgsOption.Always,
 };
 
 export interface PandaDiscordBot {
@@ -107,23 +132,6 @@ export interface PandaDiscordBot {
      * the bot.
      */
     readonly permissionValidators?: CommandPermissionValidatorConfig<this>;
-
-    /**
-     * If an object is given, named arguments are enabled when prefixed with the
-     * given string. If no object is given, named arguments are disabled.
-     *
-     * For example, `namedArgsPattern = { prefix: '--', separator: '=' };`
-     * allows the following:
-     *
-     *      `>purge @user 50 #general`
-     *
-     *      `>purge @user --channel=#general`
-     *
-     *      `>purge @user --count=50`
-     *
-     *      `>purge @user --count=50 --channel=#general`
-     */
-    readonly namedArgsPattern?: NamedArgumentPattern;
 }
 
 /**
@@ -139,6 +147,27 @@ export abstract class PandaDiscordBot {
      * All command categories for the bot.
      */
     public abstract readonly commandCategories: string[];
+
+    /**
+     * Pattern for detecting and parsing named arguments.
+     *
+     * For example, `namedArgsPattern = { prefix: '--', separator: '=' };`
+     * allows the following:
+     *
+     *      `>purge @user 50 #general`
+     *
+     *      `>purge @user --channel=#general`
+     *
+     *      `>purge @user --count=50`
+     *
+     *      `>purge @user --count=50 --channel=#general`
+     */
+    public readonly namedArgsPattern: Readonly<NamedArgumentPattern> = { prefix: '--', separator: '=' };
+
+    /**
+     * The options set on the bot when first created.
+     */
+    public readonly options: CompletePandaOptions = {} as CompletePandaOptions;
 
     /**
      * When the bot started.
@@ -174,7 +203,6 @@ export abstract class PandaDiscordBot {
      */
     public timeoutService?: TimeoutService;
 
-    protected options: CompletePandaOptions;
     protected running: boolean = false;
 
     private slashCommandsEnabled: boolean = false;
@@ -187,7 +215,6 @@ export abstract class PandaDiscordBot {
     }
 
     private mergeOptionsIn(options: Partial<PandaOptions>) {
-        this.options = {} as CompletePandaOptions;
         for (const key in defaultOptions) {
             this.options[key] = options[key] ?? defaultOptions[key];
         }
@@ -386,6 +413,21 @@ export abstract class PandaDiscordBot {
         }
 
         return extractNamedArgs(args, pattern);
+    }
+
+    /**
+     * Converts a single argument configuration into its stringified form.
+     * @param name Name of the argument.
+     * @param config Configuration for the argument.
+     * @returns String form of the argument.
+     */
+    public argString(name: string, config: SingleArgumentConfig): string {
+        let str: string = config.named
+            ? `${this.namedArgsPattern.prefix}${name}${
+                  config.type === ArgumentType.Boolean ? '' : `${this.namedArgsPattern.separator}...`
+              }`
+            : name;
+        return config.required ? str : `(${str})`;
     }
 
     /**

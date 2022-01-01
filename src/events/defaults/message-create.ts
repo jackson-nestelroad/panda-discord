@@ -36,6 +36,7 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
             args,
             content,
             guildId,
+            extraArgs: {},
         };
 
         // Global command.

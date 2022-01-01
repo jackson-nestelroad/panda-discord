@@ -1,8 +1,8 @@
+import { BaseEvent } from '../base';
+import { CommandSource } from '../../commands/command-source';
 import { Interaction } from 'discord.js';
 import { PandaDiscordBot } from '../../bot';
-import { CommandSource } from '../../commands/command-source';
 import { SlashCommandParameters } from '../../commands/params';
-import { BaseEvent } from '../base';
 
 /**
  * Default event handler for interactions.
@@ -35,6 +35,7 @@ export class DefaultInteractionCreateEvent extends BaseEvent<'interactionCreate'
                 src: new CommandSource(interaction),
                 options: interaction.options,
                 guildId: interaction.guild.id,
+                extraArgs: {},
             };
 
             try {

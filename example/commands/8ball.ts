@@ -26,9 +26,10 @@ export class EightBallCommand extends ComplexCommand<ExampleBot, EightBallArgs> 
             required: false,
         },
         response: {
-            description: 'Type of response',
+            description: 'Type of response.',
             type: ArgumentType.Integer,
             required: false,
+            named: true,
             hidden: true,
             choices: [
                 { name: 'Positive', value: EightBallResponse.Positive },
