@@ -39,7 +39,6 @@ export class EvalCommand extends ComplexCommand<PandaDiscordBot, EvalArgs> {
         },
     };
 
-    public readonly silentArg = 'silent';
     public readonly maxLength = 1900;
     public sensitivePattern: RegExp = null;
 
