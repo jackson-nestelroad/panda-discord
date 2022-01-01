@@ -156,11 +156,14 @@ export class SplitArgumentArray {
      * Restores the arguments into a string from the given index.
      * @param start Index to start from.
      * @param end Index (exclusive) to end the restored string.
-     * @returns Content with all arguments from argument `i` to the end
-     * of the string.
+     * @returns Restored string between start and end indices.
      */
     public restore(start: number, end?: number): string {
-        return this.original.substring(this.args[start]?.['beginIndex'], this.args[end]?.['beginIndex']);
+        if (start >= this._args.length) {
+            return '';
+        }
+        const endIndex = this._args[end]?.['beginIndex'] ?? this._args[this._args.length - 1]['endIndex'];
+        return this.original.substring(this.args[start]?.['beginIndex'], endIndex);
     }
 
     /**
