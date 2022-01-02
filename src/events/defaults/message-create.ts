@@ -17,6 +17,8 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
     }
 
     private async runCommand(content: string, msg: Message, guildId: Snowflake) {
+        content = content.replace(this.forbiddenMentionRegex, '@\u{200b}$1');
+
         const src = new CommandSource(msg);
         let args: SplitArgumentArray;
         try {
@@ -28,7 +30,6 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
 
         const cmd = args.shift();
         content = content.substr(cmd.length).trim();
-        content = content.replace(this.forbiddenMentionRegex, '@\u{200b}$1');
 
         const params: ChatCommandParameters = {
             bot: this.bot,
