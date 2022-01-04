@@ -163,7 +163,11 @@ export abstract class PandaDiscordBot {
      *
      *      `>purge @user --count=50 --channel=#general`
      */
-    public readonly namedArgsPattern: Readonly<NamedArgumentPattern> = { prefix: '--', separator: '=' };
+    public readonly namedArgsPattern: Readonly<NamedArgumentPattern> = {
+        prefix: '--',
+        separator: '=',
+        stopOnPrefixOnly: true,
+    };
 
     /**
      * The options set on the bot when first created.

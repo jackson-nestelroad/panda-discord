@@ -4,6 +4,7 @@ export interface NamedArgumentPattern {
     prefix: string;
     separator: string;
     separatorRequired?: boolean;
+    stopOnPrefixOnly?: boolean;
 }
 
 export interface NamedArgument {
@@ -54,6 +55,9 @@ export function extractNamedArgs(args: SplitArgumentArray, pattern: NamedArgumen
                         continue;
                     }
                 }
+            } else if (pattern.stopOnPrefixOnly && arg.content.length === pattern.prefix.length) {
+                args = args.remove(i);
+                break;
             } else if (!pattern.separatorRequired && separatorIndex === -1) {
                 // No separator, must be a boolean.
                 name = arg.content.substr(pattern.prefix.length);
