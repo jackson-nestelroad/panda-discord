@@ -159,16 +159,15 @@ export interface BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot, Shar
     readonly examples?: string[];
 
     /**
-     * Prevent this command from being ran inside of a custom command.
-     * Default is false, which allows commands to run inside of custom commands.
-     */
-    readonly disableInCustomCommand?: boolean;
-
-    /**
      * Prevent this command from being added as a slash command.
      * Default is conditional on the command's permission.
      */
     readonly disableSlash?: boolean;
+
+    /**
+     * Disables parsing named arguments.
+     */
+    readonly disableNamedArgs?: boolean;
 
     /**
      * The guild this command should be added to as a slash command.
@@ -460,18 +459,18 @@ abstract class ParameterizedCommand<
         for (const [name, config] of argEntries) {
             if (config.named) {
                 this.usesNamedArgs = true;
-                if (config.hidden && config.required) {
-                    this.throwConfigurationError('Hidden arguments cannot be required.');
-                }
-                // These arguments can be placed in any order.
-                if (!config.required) {
-                    continue;
+                if (config.hidden) {
+                    if (config.required) {
+                        this.throwConfigurationError('Hidden arguments cannot be required.');
+                    } else {
+                        continue;
+                    }
                 }
             } else if (config.hidden) {
                 this.throwConfigurationError('Hidden arguments must be marked as named arguments.');
             }
 
-            // The following logic trivially holds only for non-named arguments and required named arguments.
+            // The following logic trivially holds only for non-hidden arguments.
 
             const isRestOfContent =
                 !config.named &&
@@ -480,7 +479,7 @@ abstract class ParameterizedCommand<
             if (!state.required && config.required) {
                 // Optional argument comes after some required argument.
                 this.throwConfigurationError('Optional arguments must be configured last.');
-            } else if (state.restOfContent) {
+            } else if (state.restOfContent && !config.named) {
                 // Rest-of-content argument already found.
                 this.throwConfigurationError(
                     'Non-named arguments that use the rest of content must be configured last.',
@@ -622,16 +621,16 @@ export abstract class ComplexCommand<
 
         const cmdArgEntries: [string, SingleArgumentConfig][] = Object.entries(this.args);
 
-        let parseNamedArgs: boolean;
+        let parseNamedArgs = !this.disableNamedArgs;
         switch (params.bot.options.namedArgs) {
             case NamedArgsOption.Always:
-                parseNamedArgs = true;
+                parseNamedArgs &&= true;
                 break;
             case NamedArgsOption.Never:
-                parseNamedArgs = false;
+                parseNamedArgs &&= false;
                 break;
             case NamedArgsOption.IfNeeded:
-                parseNamedArgs = this['usesNamedArgs'];
+                parseNamedArgs &&= this['usesNamedArgs'];
                 break;
         }
 
