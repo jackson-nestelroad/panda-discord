@@ -213,6 +213,13 @@ export class ArgumentSplitter {
      */
     private readonly maxBackticksToFormAGroup = 3;
 
+    private readonly groupToAllowedEscapeSequences: Readonly<Map<GroupType, Set<string>>> = new Map([
+        [GroupType.New, new Set()],
+        [GroupType.None, new Set()],
+        [GroupType.DoubleQuote, new Set(['"'])],
+        [GroupType.CodeBacktick, new Set(['`'])],
+    ]);
+
     /**
      * Pushes the next argument into the result array as a complete argument.
      *
@@ -220,6 +227,8 @@ export class ArgumentSplitter {
      * @param end Index (exclusive) where group ends.
      */
     private pushArg(end: number): void {
+        this.appendChar('', end, true);
+
         if (this.next || (this.group !== GroupType.None && this.group !== GroupType.New)) {
             this.args.push(new SplitArgument(this.next, this.group, this.startOfCurrentGroup, end));
             this.next = '';
@@ -228,15 +237,40 @@ export class ArgumentSplitter {
     }
 
     /**
-     * Appends a character to the next argument.
+     * Appends a non-escaped character to the next argument.
      * @param char Next character.
+     * @param i Current index.
      */
-    private appendChar(char: string, i: number): void {
+    private appendNonEscapedChar(char: string, i: number): void {
         if (this.group === GroupType.New && char !== '') {
             this.newGroup(GroupType.None, i);
         }
+
         this.next += char;
         this.escaped = false;
+    }
+
+    /**
+     * Appends a potentially-escaped character to the next argument.
+     *
+     * If the character is allowed to be escaped in the current group
+     * type, only the character is appended. If not, the backslash
+     * used to restore it is restored.
+     * @param char Next character.
+     * @param i Current index.
+     * @param restoreBackslash Forcibly restore the backslash used to
+     * escape this character, if the character is escaped, regardless
+     * of group rules.
+     */
+    private appendChar(char: string, i: number, restoreBackslash?: boolean): void {
+        if (this.escaped) {
+            const restore = restoreBackslash ?? !this.groupToAllowedEscapeSequences.get(this.group)?.has(char);
+            if (restore) {
+                this.appendNonEscapedChar('\\', i - 1);
+            }
+        }
+
+        this.appendNonEscapedChar(char, i);
     }
 
     /**
@@ -258,34 +292,33 @@ export class ArgumentSplitter {
         switch (char) {
             // Backslashes are used for escaping.
             case '\\':
-                this.escaped = !this.escaped;
-                if (!this.escaped) {
-                    this.appendChar(char, i);
-                }
+                // Append the empty character, which will restore one backslash
+                // if this character is cucrrently escaped.
+                // Thus, '\\' => '\' in the bot's eyes.
+
+                // This behavior can be unintuitive from a user's perspective
+                // only when commands depend on taking a certain number of
+                // backslashes in.
+                // It's safe to assume bots won't depend on such behavior.
+                const wasEscaped = this.escaped;
+                this.appendChar('', i, true);
+                this.escaped = !wasEscaped;
                 break;
             // Quotes can be used to group an argument together.
             case '"':
-                if (this.group === GroupType.DoubleQuote) {
-                    if (!this.escaped) {
+                if (!this.escaped) {
+                    if (this.group === GroupType.DoubleQuote) {
                         // End of the current argument group.
                         this.pushArg(i + 1);
-                    } else {
-                        // Quote is escaped, just a normal char.
-                        this.appendChar(char, i);
-                    }
-                } else if (this.group === GroupType.New || this.group === GroupType.None) {
-                    if (!this.escaped) {
+                        return;
+                    } else if (this.group === GroupType.New || this.group === GroupType.None) {
                         // Start of a new argument group.
                         this.pushArg(i);
                         this.newGroup(GroupType.DoubleQuote, i);
-                    } else {
-                        // Quote is escaped, just a normal char.
-                        this.appendChar(char, i);
+                        return;
                     }
-                } else {
-                    // In some other group, just a normal char.
-                    this.appendChar(char, i);
                 }
+                this.appendChar(char, i);
                 break;
             // Whitespace is used to separate arguments when not in a group.
             case ' ':
@@ -297,14 +330,16 @@ export class ArgumentSplitter {
                 if (this.group === GroupType.None || this.group === GroupType.New) {
                     // No group, so whitespace is the separator.
                     this.pushArg(i);
-                } else {
-                    // In a group, so whitespace is a normal char.
-                    this.appendChar(char, i);
+                    return;
                 }
+                // In a group, so whitespace is a normal char.
+                this.appendChar(char, i, true);
                 break;
             // Empty character signals the end.
             case '':
-                if (this.group === GroupType.None) {
+                // Append the empty character for possibly restoring a lone backslash only.
+                this.appendChar(char, i, true);
+                if (this.group === GroupType.None || this.group === GroupType.New) {
                     this.pushArg(i);
                 }
                 break;
@@ -387,32 +422,22 @@ export class ArgumentSplitter {
                 // Set group after push.
                 this.group = GroupType.CodeBacktick;
                 this.handleExtraBackticks(i);
-
-                if (this.group === GroupType.CodeBacktick) {
-                    this.appendChar(char, i);
-                } else {
-                    this.consumeNormalChar(char, i);
-                }
             } else if (this.group === GroupType.CodeBacktick) {
                 // When the group is a code block, the number of past backticks must be set.
                 if (this.backticks.past === 0) {
                     throw new ArgumentSplitterError('Parsing a code block, but unknown number of backticks to match.');
                 }
 
-                // Less backticks now then we need to match the group, so we append them as normal chars.
-                if (this.backticks.present < this.backticks.past) {
-                    this.appendChar('`'.repeat(this.backticks.present), i);
-                } else {
-                    // We surely have enough backticks to match the group, so count those off.
-                    this.backticks.present -= this.backticks.past;
-                    // Push whatever is in the group.
-                    this.pushArg(i - this.backticks.present);
-                    this.handleExtraBackticks(i);
-
-                    if (this.group === GroupType.CodeBacktick) {
-                        this.appendChar(char, i);
+                if (this.backticks.present !== 0) {
+                    if (this.backticks.present < this.backticks.past) {
+                        // Less backticks now then we need to match the group, so we append them as normal chars.
+                        this.appendChar('`'.repeat(this.backticks.present), i);
                     } else {
-                        this.consumeNormalChar(char, i);
+                        // We surely have enough backticks to match the group, so count those off.
+                        this.backticks.present -= this.backticks.past;
+                        // Push whatever is in the group.
+                        this.pushArg(i - this.backticks.present);
+                        this.handleExtraBackticks(i);
                     }
                 }
             } else {
@@ -420,6 +445,9 @@ export class ArgumentSplitter {
                     `Impossible condition: backticks are recorded but group is in unknown state \`${this.group}\``,
                 );
             }
+
+            this.consumeNormalChar(char, i);
+            this.backticks.present = 0;
         } else {
             // No backticks are being recorded, so let's handle the char normally.
             this.consumeNormalChar(char, i);
