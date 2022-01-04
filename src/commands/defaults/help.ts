@@ -174,6 +174,11 @@ export class HelpCommand<Bot extends PandaDiscordBot = PandaDiscordBot> extends 
             } else {
                 commandsString = [...categoryCommands.keys()].map(value => `\`${prefix}${value}\``).join(', ');
             }
+
+            if (!commandsString) {
+                commandsString = 'No commands!';
+            }
+
             embed.setDescription(commandsString);
             return;
         }
@@ -228,6 +233,12 @@ export class HelpCommand<Bot extends PandaDiscordBot = PandaDiscordBot> extends 
         // Organize commands by category only once, since category shouldn't ever change.
         if (!this.commandListByCategory) {
             this.commandListByCategory = new Map();
+            for (const category of bot.commandCategories) {
+                if (CommandCategoryUtil.isPublic(category)) {
+                    const categoryName = CommandCategoryUtil.realName(category);
+                    this.commandListByCategory.set(categoryName, new Map());
+                }
+            }
             this.addCommandsToCommandListByCategory(bot, bot.commands);
         }
 
