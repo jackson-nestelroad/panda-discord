@@ -18,7 +18,7 @@ export { CommandCategoryUtil, DefaultCommandCategory } from './commands/category
 export { CommandSource } from './commands/command-source';
 export { CommandTypeArray, CommandMap, CommandConfig } from './commands/config';
 export { EvalCommand } from './commands/defaults/eval';
-export { HelpCommand } from './commands/defaults/help';
+export { HelpArgs, HelpCommand } from './commands/defaults/help';
 export { PingCommand } from './commands/defaults/ping';
 export { CommandParameters, ChatCommandParameters, SlashCommandParameters } from './commands/params';
 export {

@@ -9,7 +9,7 @@ import { ExpireAgeConversion } from '../../util/timed-cache';
 import { MessageEmbed } from 'discord.js';
 import { PandaDiscordBot } from '../../bot';
 
-interface HelpArgs {
+export interface HelpArgs {
     query?: string;
 }
 
