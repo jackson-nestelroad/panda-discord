@@ -336,9 +336,11 @@ export abstract class PandaDiscordBot {
                 const old = cmdManager.cache.find(cmd => cmd.name === name);
                 if (old) {
                     if (DiscordUtil.slashCommandNeedsUpdate(old, newData)) {
+                        console.log(`Editing ${name}`);
                         await cmdManager.edit(old, newData);
                     }
                 } else {
+                    console.log(`Creating ${name}`);
                     await cmdManager.create(newData);
                 }
             } else {
@@ -346,6 +348,7 @@ export abstract class PandaDiscordBot {
                 const cmdManager = await this.getCommandManager(cmd);
                 const old = cmdManager.cache.find(cmd => cmd.name === name);
                 if (old) {
+                    console.log(`Deleting ${name}`);
                     await cmdManager.delete(old);
                 }
             }
