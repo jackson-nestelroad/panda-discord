@@ -28,6 +28,11 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
             return;
         }
 
+        // No arguments, which really means no command.
+        if (args.length === 0) {
+            return;
+        }
+
         const cmd = args.shift();
         content = content.substr(cmd.length).trim();
 
