@@ -18,10 +18,10 @@ import {
     SingleArgumentTransformer,
 } from './arguments';
 import { ChatCommandParameters, CommandParameters, SlashCommandArgumentLevel, SlashCommandParameters } from './params';
+import { CommandCategoryUtil, DefaultCommandCategory } from './category';
 import { CommandMap, CommandTypeArray } from './config';
 import { ExpireAge, ExpireAgeFormat, TimedCache } from '../util/timed-cache';
 
-import { DefaultCommandCategory } from './category';
 import { DefaultCommandPermission } from './permission';
 import { DiscordUtil } from '../util/discord';
 import { NamedArgsOption } from '..';
@@ -275,7 +275,7 @@ export abstract class BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot,
      */
     public get isSlashCommand(): boolean {
         // Command must be public.
-        return !this.disableSlash && this.permission === 'Everyone';
+        return !this.disableSlash && this.permission === 'Everyone' && CommandCategoryUtil.isPublic(this.category);
     }
 
     /**
