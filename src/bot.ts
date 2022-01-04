@@ -1,4 +1,5 @@
 import {
+    AnyChannel,
     ApplicationCommandManager,
     Channel,
     Client,
@@ -448,7 +449,7 @@ export abstract class PandaDiscordBot {
      * @param mention Mention string.
      * @returns Channel that was mentioned.
      */
-    public getChannelFromMention(mention: string): Channel | null {
+    public getChannelFromMention(mention: string): AnyChannel | null {
         const match = DiscordUtil.channelMentionRegex.exec(mention);
         if (match) {
             return this.client.channels.cache.get(match[1] as Snowflake) || null;

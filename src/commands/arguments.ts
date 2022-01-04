@@ -1,6 +1,5 @@
 import {
     ApplicationCommandOptionChoice,
-    Channel,
     CommandInteractionOption,
     GuildChannel,
     GuildMember,
@@ -43,13 +42,11 @@ export enum ArgumentType {
     // Slash commmands will give a mention.
     // Chat commands will allow a mention for any of the options.
 
+    Number = 10, // A floating point number.
+
     RestOfContent = 100, // The rest of the content in the message that has not been parsed.
     // Chat commands implement this trivially in parsing.
     // Slash commands implement this as a string, since they can take spaces.
-
-    FloatingPoint = 101, // A floating point number that can be parsed with parseFloat().
-    // Chat commands implement this trivially in parsing.
-    // Slash commands implement this as a string that is parsed later by the bot.
 
     SplitArguments = 102, // An array of split arguments that have been parsed by ArgumentSplitter.
     // Chat commands implement this by simply passing the rest of the split args array.
@@ -77,7 +74,7 @@ type ArgumentTypeResultMap<A extends ArgumentType> = A extends ArgumentType.Stri
     ? Mentionable
     : A extends ArgumentType.RestOfContent
     ? string
-    : A extends ArgumentType.FloatingPoint
+    : A extends ArgumentType.Number
     ? number
     : A extends ArgumentType.SplitArguments
     ? SplitArgumentArray
@@ -243,19 +240,7 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
             },
         },
     },
-    [ArgumentType.RestOfContent]: {
-        parsers: {
-            chat: (context, out) => {
-                context.value = context.params.args.restore(context.i);
-                context.i = context.params.args.length;
-                ArgumentTypeConfig[ArgumentType.String].parsers.chat(context, out);
-            },
-            slash: (option, out) => {
-                out.value = option.value as string;
-            },
-        },
-    },
-    [ArgumentType.FloatingPoint]: {
+    [ArgumentType.Number]: {
         parsers: {
             chat: (context, out) => {
                 if (context.config.choices) {
@@ -268,15 +253,24 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
                 } else {
                     out.value = parseFloat(context.value);
                     if (isNaN(out.value)) {
-                        out.error = `Invalid floating point value \`${context.value}\` for argument \`${context.name}\`.`;
+                        out.error = `Invalid number value \`${context.value}\` for argument \`${context.name}\`.`;
                     }
                 }
             },
             slash: (option, out) => {
-                out.value = parseFloat(option.value as string);
-                if (isNaN(out.value)) {
-                    out.error = `Invalid floating point value \`${option.value}\` for argument \`${option.name}\`.`;
-                }
+                out.value = option.value as number;
+            },
+        },
+    },
+    [ArgumentType.RestOfContent]: {
+        parsers: {
+            chat: (context, out) => {
+                context.value = context.params.args.restore(context.i);
+                context.i = context.params.args.length;
+                ArgumentTypeConfig[ArgumentType.String].parsers.chat(context, out);
+            },
+            slash: (option, out) => {
+                out.value = option.value as string;
             },
         },
     },
@@ -340,7 +334,7 @@ type TypedSingleArgumentConfig<P = unknown> =
     | SingleTypedSingleArgumentConfig<ArgumentType.Role, P>
     | SingleTypedSingleArgumentConfig<ArgumentType.Mentionable, P>
     | SingleTypedSingleArgumentConfig<ArgumentType.RestOfContent, P>
-    | SingleTypedSingleArgumentConfig<ArgumentType.FloatingPoint, P>
+    | SingleTypedSingleArgumentConfig<ArgumentType.Number, P>
     | SingleTypedSingleArgumentConfig<ArgumentType.SplitArguments, P>;
 
 // Parts of the argument config that do not depend on types.

@@ -1,4 +1,5 @@
-import { CommandInteractionOptionResolver } from 'discord.js';
+import { CacheType, CommandInteractionOptionResolver } from 'discord.js';
+
 import { CommandSource } from './command-source';
 import { PandaDiscordBot } from '../bot';
 import { Snowflake } from 'discord.js';
@@ -62,7 +63,7 @@ export interface SlashCommandParameters<Bot extends PandaDiscordBot = PandaDisco
      *
      * This is parsed into a preset format depending on the command.
      */
-    options: CommandInteractionOptionResolver;
+    options: Omit<CommandInteractionOptionResolver<CacheType>, 'getMessage' | 'getFocused'>;
 
     /**
      * The current level the slash command is executing in.

@@ -136,7 +136,7 @@ export class HelpCommand<Bot extends PandaDiscordBot = PandaDiscordBot> extends 
 
     private async handleHelpQuery(params: CommandParameters<Bot>, args: HelpArgs, embed: MessageEmbed) {
         const { bot, src, guildId } = params;
-        embed.setAuthor(bot.name + ' Commands', bot.avatarUrl);
+        embed.setAuthor({ name: bot.name + ' Commands', iconURL: bot.avatarUrl });
         const prefix = await bot.getPrefix(guildId);
         const query = args.query;
 

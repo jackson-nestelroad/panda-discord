@@ -33,13 +33,12 @@ enum CommandSourceType {
 }
 
 interface CommandSourceTypeMetadata {
-    type: new (...args: any[]) => any;
+    type: any;
     field: string;
 }
 
 // Metadata for each command source type.
-// Do not type this object so that the literal types are available for use.
-const CommandSourceTypeMap = {
+const CommandSourceTypeMap: Record<CommandSourceType, CommandSourceTypeMetadata> = {
     [CommandSourceType.Message]: {
         type: Message,
         field: 'message',
@@ -54,24 +53,8 @@ const CommandSourceTypeMap = {
     },
 } as const;
 
-// Enforces that the above map has all of the required metadata.
-const StronglyTypedCommandSourceTypes: { [type in CommandSourceType]: CommandSourceTypeMetadata } =
-    CommandSourceTypeMap;
-
-// Different command source types do not use inheritance.
-// Instead, a single named value is exposed on the command source depending
-// on the underlying type.
-// This allows a single constructor to be used and the correct value is always exposed.
-type ExposePropertyOnClass<Class extends object, Prop extends string, Type extends object> = Class &
-    { [field in Prop]: Type };
-type KnownCommandSource<T extends CommandSourceType> = ExposePropertyOnClass<
-    CommandSource,
-    typeof CommandSourceTypeMap[T]['field'],
-    InstanceType<typeof CommandSourceTypeMap[T]['type']>
->;
-
-type MessageCommandSource = KnownCommandSource<CommandSourceType.Message>;
-type InteractionCommandSource = KnownCommandSource<CommandSourceType.Interaction>;
+type MessageCommandSource = CommandSource & { message: Message };
+type InteractionCommandSource = CommandSource & { interaction: CommandInteraction };
 
 /**
  * A wrapper around a message or an interaction, whichever receives the command.

@@ -1,4 +1,12 @@
-import { ApplicationCommandData, ApplicationCommandOptionType, MessageEmbed, Snowflake } from 'discord.js';
+import {
+    ApplicationCommandOptionData,
+    ApplicationCommandOptionType,
+    ApplicationCommandSubCommandData,
+    ApplicationCommandSubGroupData,
+    ChatInputApplicationCommandData,
+    MessageEmbed,
+    Snowflake,
+} from 'discord.js';
 import {
     ArgumentParserResult,
     ArgumentType,
@@ -292,7 +300,7 @@ export abstract class BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot,
     /**
      * Generates data to be used for slash command configuration.
      */
-    public abstract commandData(): ApplicationCommandData;
+    public abstract commandData(): ChatInputApplicationCommandData;
 
     /**
      * Runs the command when it is called from a message.
@@ -380,7 +388,7 @@ export abstract class SimpleCommand<Bot extends PandaDiscordBot, Shared = never>
         return '';
     }
 
-    public commandData(): ApplicationCommandData {
+    public commandData(): ChatInputApplicationCommandData {
         return {
             name: this.name,
             description: this.description,
@@ -431,8 +439,6 @@ abstract class ParameterizedCommand<
     private static convertArgumentType(type: ArgumentType): ApplicationCommandOptionType {
         switch (type) {
             case ArgumentType.RestOfContent:
-                return 'STRING';
-            case ArgumentType.FloatingPoint:
                 return 'STRING';
             case ArgumentType.SplitArguments:
                 return 'STRING';
@@ -491,7 +497,7 @@ abstract class ParameterizedCommand<
         }
     }
 
-    public commandData(): ApplicationCommandData {
+    public commandData(): ChatInputApplicationCommandData {
         // Validate argument config at setup time.
         this.validateArgumentConfig();
 
@@ -507,7 +513,7 @@ abstract class ParameterizedCommand<
                         type: ParameterizedCommand.convertArgumentType(config.type),
                         required: config.required,
                         choices: config.choices?.length !== 0 ? config.choices : undefined ?? undefined,
-                    };
+                    } as ApplicationCommandOptionData;
                 }),
             defaultPermission: this.permission === DefaultCommandPermission.Everyone,
         };
@@ -832,8 +838,8 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
         }
     }
 
-    public commandData(): ApplicationCommandData {
-        const data = {} as ApplicationCommandData;
+    public commandData(): ChatInputApplicationCommandData {
+        const data = {} as ChatInputApplicationCommandData;
 
         data.name = this.name;
         data.description = this.description;
@@ -851,7 +857,7 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
                 description: cmd.description,
                 type,
                 options: subData.options?.length !== 0 ? subData.options : undefined ?? undefined,
-            });
+            } as ApplicationCommandSubGroupData | ApplicationCommandSubCommandData);
         }
 
         return data;

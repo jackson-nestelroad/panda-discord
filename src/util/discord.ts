@@ -1,4 +1,4 @@
-import { ApplicationCommand, ApplicationCommandData, GuildMember, Role, User } from 'discord.js';
+import { ApplicationCommand, ChatInputApplicationCommandData, GuildMember, Role, User } from 'discord.js';
 
 export type Mentionable = GuildMember | User | Role;
 
@@ -101,6 +101,7 @@ export namespace DiscordUtil {
         CHANNEL = 7,
         ROLE = 8,
         MENTIONABLE = 9,
+        NUMBER = 10,
     }
 
     /**
@@ -141,7 +142,10 @@ export namespace DiscordUtil {
      * @param newData New command data.
      * @returns Should the command be updated (are they different)?
      */
-    export function slashCommandNeedsUpdate(old: ApplicationCommand, newData: ApplicationCommandData): boolean {
+    export function slashCommandNeedsUpdate(
+        old: ApplicationCommand,
+        newData: ChatInputApplicationCommandData,
+    ): boolean {
         // First check description and options length.
         let needsUpdate = old.name !== newData.name;
         needsUpdate ||= old.description !== newData.description;
@@ -157,13 +161,13 @@ export namespace DiscordUtil {
             needsUpdate ||=
                 a.name !== b.name ||
                 a.description !== b.description ||
-                !!a.required !== !!b.required ||
+                !!a['required'] !== !!b['required'] ||
                 // Old command stores a string, new data can store an integer or string
                 // Just make sure to store a string so this comparison works!
                 a.type !== b.type ||
                 // Compare the choices and nested options themselves.
-                !deepEqual(a.choices ?? [], b.choices ?? []) ||
-                !deepEqual(a.options ?? [], b.options ?? []);
+                !deepEqual(a['choices'] ?? [], b['choices'] ?? []) ||
+                !deepEqual(a['options'] ?? [], b['options'] ?? []);
         }
         return needsUpdate;
     }
