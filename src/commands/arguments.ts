@@ -1,5 +1,5 @@
 import {
-    ApplicationCommandOptionChoice,
+    ApplicationCommandOptionChoiceData,
     CommandInteractionOption,
     GuildChannel,
     GuildMember,
@@ -315,7 +315,7 @@ type SingleArgumentTransformersRequiredConfig<T = DefaultT, P = unknown> =
 type SingleTypedSingleArgumentConfig<A extends ArgumentType = ArgumentType, P = unknown> = {
     type: A;
     default?: ArgumentTypeResultMap<A>;
-    choices?: ArgumentTypeResultMap<A> extends string | number ? ApplicationCommandOptionChoice[] : never;
+    choices?: ArgumentTypeResultMap<A> extends string | number ? ApplicationCommandOptionChoiceData[] : never;
 } & (ArgumentTypeResultMap<A> extends P // If not, then the user must define at least one transformer to make the conversion possible // If we can assign the type we parse to P, then transformers are optional
     ? {
           transformers?: SingleArgumentTransformersOptionalConfig<ArgumentTypeResultMap<A>, P>;

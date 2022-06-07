@@ -211,7 +211,7 @@ export class CommandSource {
      * @param res Response object.
      * @returns New command source for next response.
      */
-    private async respondInteraction(res: SendResponse & ReplyResponse & EditResponse): Promise<CommandSource> {
+    private async respondInteraction(res: SendResponse | ReplyResponse): Promise<CommandSource> {
         if (!this.isInteraction()) {
             throw new Error(`Attempted to respond to a ${CommandSourceType[this.type]} command as an Interaction.`);
         }
