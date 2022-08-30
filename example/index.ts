@@ -33,7 +33,7 @@ import { ShowArgsCommand } from './commands/show-args';
         namedArgs: NamedArgsOption.IfNeeded,
         commandType: EnabledCommandType.Message | EnabledCommandType.Slash,
     });
-    await bot.run('TOKEN_HERE');
+    await bot.run(process.env.TOKEN);
 })().catch(error => {
     console.error(error);
     process.exit(1);
