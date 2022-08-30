@@ -1,7 +1,8 @@
+import { EnabledCommandType, PandaDiscordBot } from '../../bot';
+
 import { BaseEvent } from '../base';
 import { CommandSource } from '../../commands/command-source';
 import { Interaction } from 'discord.js';
-import { PandaDiscordBot } from '../../bot';
 import { SlashCommandParameters } from '../../commands/params';
 
 /**
@@ -13,8 +14,13 @@ export class DefaultInteractionCreateEvent extends BaseEvent<'interactionCreate'
     }
 
     public async run(interaction: Interaction) {
-        // Only serve commands.
-        if (!interaction.isCommand()) {
+        // Bot ignores slash commands.
+        if ((this.bot.options.commandType & EnabledCommandType.Slash) === 0) {
+            return;
+        }
+
+        // Only serve chat input commands in this handler.
+        if (!interaction.isChatInputCommand()) {
             return;
         }
 
@@ -42,6 +48,8 @@ export class DefaultInteractionCreateEvent extends BaseEvent<'interactionCreate'
                 const command = this.bot.commands.get(interaction.commandName);
                 if (this.bot.validate(params, command)) {
                     await command.executeSlash(params);
+                } else {
+                    await params.src.reply({ content: 'Permission denied', ephemeral: true });
                 }
             } catch (error) {
                 this.bot.sendError(params.src, error);

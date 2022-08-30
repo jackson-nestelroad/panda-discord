@@ -134,7 +134,7 @@ export class SplitArgumentArray {
         const endThisGroup = this._args[i]['endIndex'];
         const endPrevGroup = this._args[i - 1]['endIndex'];
 
-        const squished = this.original.substr(0, endPrevGroup) + this.original.substr(endThisGroup);
+        const squished = this.original.substring(0, endPrevGroup) + this.original.substring(endThisGroup);
 
         // All args before the removed index are valid, but all args after the removed index
         // are offset by the length of the removed chunk. Fix them before returning.

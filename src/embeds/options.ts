@@ -1,4 +1,4 @@
-import { MessageEmbed } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import { PandaDiscordBot } from '../bot';
 
 /**
@@ -41,8 +41,8 @@ export class EmbedOptions {
      * @param bot Panda bot.
      * @returns New message embed.
      */
-    public create(bot: PandaDiscordBot): MessageEmbed {
-        const embed = new MessageEmbed();
+    public create(bot: PandaDiscordBot): EmbedBuilder {
+        const embed = new EmbedBuilder();
 
         if (this.color) {
             embed.setColor(this.color);

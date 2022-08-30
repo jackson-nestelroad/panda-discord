@@ -1,4 +1,4 @@
-export { PandaDiscordBot, PandaOptions, NamedArgsOption } from './bot';
+export { EnabledCommandType, PandaDiscordBot, PandaOptions, NamedArgsOption } from './bot';
 export {
     ArgumentType,
     ArgumentParserResult,
@@ -21,11 +21,7 @@ export { EvalCommand } from './commands/defaults/eval';
 export { HelpArgs, HelpCommand } from './commands/defaults/help';
 export { PingCommand } from './commands/defaults/ping';
 export { CommandParameters, ChatCommandParameters, SlashCommandParameters } from './commands/params';
-export {
-    CommandPermissionValidator,
-    CommandPermissionValidatorConfig,
-    DefaultCommandPermission,
-} from './commands/permission';
+export { CommandPermissionOptions, CommandPermissionValidator, DefaultCommandPermission } from './commands/permission';
 export { EmbedProps, EmbedOptions, EmbedTemplates } from './embeds/options';
 export { BaseEvent } from './events/base';
 export { EventTypeArray, EventMap, EventConfig } from './events/config';

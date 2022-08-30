@@ -4,7 +4,8 @@ import {
     ApplicationCommandSubCommandData,
     ApplicationCommandSubGroupData,
     ChatInputApplicationCommandData,
-    MessageEmbed,
+    EmbedBuilder,
+    PermissionResolvable,
     Snowflake,
 } from 'discord.js';
 import {
@@ -22,7 +23,7 @@ import { CommandCategoryUtil, DefaultCommandCategory } from './category';
 import { CommandMap, CommandTypeArray } from './config';
 import { ExpireAge, ExpireAgeFormat, TimedCache } from '../util/timed-cache';
 
-import { DefaultCommandPermission } from './permission';
+import { CommandPermissionOptions } from './permission';
 import { DiscordUtil } from '../util/discord';
 import { NamedArgsOption } from '..';
 import { PandaDiscordBot } from '../bot';
@@ -67,7 +68,7 @@ namespace InternalCommandModifiers {
         cmd['category' as string] = category;
     }
 
-    export function setPermission(cmd: BaseCommand, permission: string) {
+    export function setPermission(cmd: BaseCommand, permission: CommandPermissionOptions) {
         cmd['permission' as string] = permission;
     }
 }
@@ -168,9 +169,15 @@ export interface BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot, Shar
 
     /**
      * Prevent this command from being added as a slash command.
-     * Default is conditional on the command's permission.
+     * Default is false.
      */
     readonly disableSlash?: boolean;
+
+    /**
+     * Override for which member permissions are required to execute the command.
+     * By default, the member permissions on the command permission are used.
+     */
+    readonly memberPermissionRequired?: PermissionResolvable;
 
     /**
      * Disables parsing named arguments.
@@ -209,7 +216,7 @@ export interface BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot, Shar
      * Add any additional fields to the help page if desired.
      * @param embed Help embed.
      */
-    addHelpFields?(embed: MessageEmbed): void;
+    addHelpFields?(embed: EmbedBuilder): void;
 }
 
 /**
@@ -237,7 +244,7 @@ export abstract class BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot,
     /**
      * Specifies the level of permission needed to run the command.
      */
-    public abstract readonly permission: string;
+    public abstract readonly permission: CommandPermissionOptions;
 
     /**
      * Optional object for specifying the arguments the command takes.
@@ -275,7 +282,7 @@ export abstract class BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot,
      */
     public get isSlashCommand(): boolean {
         // Command must be public.
-        return !this.disableSlash && this.permission === 'Everyone' && CommandCategoryUtil.isPublic(this.category);
+        return !this.disableSlash && CommandCategoryUtil.isPublic(this.category);
     }
 
     /**
@@ -340,7 +347,7 @@ export abstract class BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot,
             InternalCommandModifiers.setCategory(this, this.parentCommand.category);
         }
 
-        if (this.permission === DefaultCommandPermission.Inherit) {
+        if (this.permission.inherit) {
             if (!this.parentCommand) {
                 this.throwConfigurationError('Only subcommands can inherit command permission from parent.');
             }
@@ -393,7 +400,8 @@ export abstract class SimpleCommand<Bot extends PandaDiscordBot, Shared = never>
             name: this.name,
             description: this.description,
             options: undefined,
-            defaultPermission: this.permission === DefaultCommandPermission.Everyone,
+            defaultMemberPermissions: this.permission.memberPermissions ?? null,
+            dmPermission: false,
         };
     }
 
@@ -439,11 +447,11 @@ abstract class ParameterizedCommand<
     private static convertArgumentType(type: ArgumentType): ApplicationCommandOptionType {
         switch (type) {
             case ArgumentType.RestOfContent:
-                return 'STRING';
+                return ApplicationCommandOptionType.String;
             case ArgumentType.SplitArguments:
-                return 'STRING';
+                return ApplicationCommandOptionType.String;
             default:
-                return DiscordUtil.ActualApplicationCommandOptionTypeEnum[type] as ApplicationCommandOptionType;
+                return type as number as ApplicationCommandOptionType;
         }
     }
 
@@ -515,7 +523,8 @@ abstract class ParameterizedCommand<
                         choices: config.choices?.length !== 0 ? config.choices : undefined ?? undefined,
                     } as ApplicationCommandOptionData;
                 }),
-            defaultPermission: this.permission === DefaultCommandPermission.Everyone,
+            defaultMemberPermissions: this.permission.memberPermissions ?? null,
+            dmPermission: false,
         };
     }
 
@@ -843,7 +852,8 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
 
         data.name = this.name;
         data.description = this.description;
-        data.defaultPermission = this.permission === DefaultCommandPermission.Everyone;
+        data.defaultMemberPermissions = this.permission.memberPermissions ?? null;
+        data.dmPermission = false;
         data.options = [];
 
         for (const [key, cmd] of [...this.subcommandMap.entries()]) {
@@ -851,7 +861,9 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
             // We only support two levels of nesting, so this logic is adequate.
             // If the command is nested, then this level should be the subcommand group.
             // If the command is not nested, then this level should be the subcommand.
-            const type: ApplicationCommandOptionType = cmd.isNested ? 'SUB_COMMAND_GROUP' : 'SUB_COMMAND';
+            const type = cmd.isNested
+                ? ApplicationCommandOptionType.SubcommandGroup
+                : ApplicationCommandOptionType.Subcommand;
             data.options.push({
                 name: cmd.name,
                 description: cmd.description,
@@ -863,8 +875,11 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
         return data;
     }
 
-    public addHelpFields(embed: MessageEmbed) {
-        embed.addField('Subcommands', [...this.subcommandMap.keys()].map(key => `\`${key}\``).join(', '));
+    public addHelpFields(embed: EmbedBuilder) {
+        embed.addFields({
+            name: 'Subcommands',
+            value: [...this.subcommandMap.keys()].map(key => `\`${key}\``).join(', '),
+        });
     }
 
     // Delegates a chat command to a subcommand.

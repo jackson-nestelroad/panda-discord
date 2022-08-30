@@ -1,18 +1,7 @@
-import { PandaDiscordBot } from '../bot';
-import { CommandParameters } from './params';
+import { PermissionFlagsBits, PermissionResolvable } from 'discord.js';
 
-/**
- * Default command permissions supported by the bot framework.
- *
- * You should use your own enum or set of strings for new
- * permission schemes, but still use these values if using
- * default commands.
- */
-export enum DefaultCommandPermission {
-    Everyone = 'Everyone',
-    Owner = 'Owner',
-    Inherit = '_Inherit',
-}
+import { CommandParameters } from './params';
+import { PandaDiscordBot } from '../bot';
 
 /**
  * Validates if a command should be run or not.
@@ -22,11 +11,38 @@ export type CommandPermissionValidator<Bot extends PandaDiscordBot = PandaDiscor
     params: CommandParameters<Bot>,
 ) => boolean;
 
+export interface CommandPermissionOptions<Bot extends PandaDiscordBot = PandaDiscordBot> {
+    name: string;
+    hidden?: boolean;
+    inherit?: boolean;
+    /**
+     * Member permissions required to execute the command.
+     *
+     * Use `0n` for no one. Use `null` for everyone.
+     * Otherwise, use a bit string constructed from `PermissionFlagsBits`.
+     */
+    memberPermissions?: PermissionResolvable;
+    validate?: CommandPermissionValidator<Bot>;
+}
+
 /**
- * Config type for command permission validators. Maps a command permission
- * string to its validation config.
+ * Default command permissions supported by the bot framework.
  */
-export type CommandPermissionValidatorConfig<Bot extends PandaDiscordBot> = Record<
-    string,
-    CommandPermissionValidator<Bot>
->;
+export const DefaultCommandPermission = {
+    Everyone: {
+        name: 'Everyone',
+        memberPermissions: null,
+    } as CommandPermissionOptions,
+    Owner: {
+        name: 'Bot Owner',
+        memberPermissions: BigInt(0),
+        validate: params => {
+            return params.src.author.id == params.bot.options.owner;
+        },
+    } as CommandPermissionOptions,
+    Inherit: {
+        name: 'Inherit',
+        hidden: true,
+        inherit: true,
+    } as CommandPermissionOptions,
+} as const;

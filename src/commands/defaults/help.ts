@@ -1,13 +1,13 @@
 import { ArgumentType, ArgumentsConfig, SingleArgumentConfig } from '../arguments';
 import { BaseCommand, ComplexCommand, StandardCooldowns } from '../base';
 import { CommandCategoryUtil, DefaultCommandCategory } from '../category';
+import { EnabledCommandType, PandaDiscordBot } from '../../bot';
 
 import { CommandMap } from '../config';
 import { CommandParameters } from '../params';
 import { DefaultCommandPermission } from '../permission';
+import { EmbedBuilder } from 'discord.js';
 import { ExpireAgeConversion } from '../../util/timed-cache';
-import { MessageEmbed } from 'discord.js';
-import { PandaDiscordBot } from '../../bot';
 
 export interface HelpArgs {
     query?: string;
@@ -28,7 +28,7 @@ export interface HelpCommand<Bot extends PandaDiscordBot = PandaDiscordBot> {
     handleHelpQueryBeforeCommands?(
         params: CommandParameters<Bot>,
         args: HelpArgs,
-        embed: MessageEmbed,
+        embed: EmbedBuilder,
     ): Promise<boolean>;
 
     /**
@@ -45,7 +45,7 @@ export interface HelpCommand<Bot extends PandaDiscordBot = PandaDiscordBot> {
     handleHelpQueryAfterCommands?(
         params: CommandParameters<Bot>,
         args: HelpArgs,
-        embed: MessageEmbed,
+        embed: EmbedBuilder,
     ): Promise<boolean>;
 }
 
@@ -134,20 +134,32 @@ export class HelpCommand<Bot extends PandaDiscordBot = PandaDiscordBot> extends 
         });
     }
 
-    private async handleHelpQuery(params: CommandParameters<Bot>, args: HelpArgs, embed: MessageEmbed) {
+    private async handleHelpQuery(params: CommandParameters<Bot>, args: HelpArgs, embed: EmbedBuilder) {
         const { bot, src, guildId } = params;
         embed.setAuthor({ name: bot.name + ' Commands', iconURL: bot.avatarUrl });
-        const prefix = await bot.getPrefix(guildId);
+        // Prefix defaults to slash.
+        const prefix =
+            (bot.options.commandType & EnabledCommandType.Message) !== 0 ? (await bot.getPrefix(guildId)) ?? '/' : '/';
         const query = args.query;
 
         if (!query) {
             // Blank, give all public command categories.
             embed.setTitle('All Command Categories');
-            embed.setDescription(
-                `You may also use \`@${bot.name} cmd\` to run any command. Public commands are also available as slash commands.\n\nUse \`${prefix}${this.name}\` to view commands in a specific category.`,
-            );
 
-            embed.addField('Categories', [...this.commandListByCategory.keys()].join('\n'));
+            let description = '';
+            if ((bot.options.commandType & EnabledCommandType.Message) !== 0) {
+                description += `You may also use \`@${bot.name} cmd\` to run any command.`;
+                if ((bot.options.commandType & EnabledCommandType.Slash) !== 0) {
+                    description += ' All commands are also available as slash commands.';
+                }
+            } else if ((bot.options.commandType & EnabledCommandType.Slash) !== 0) {
+                description += 'All commands are available as slash commands.';
+            }
+
+            description += `\n\nUse \`${prefix}${this.name}\` to view commands in a specific category.`;
+            embed.setDescription(description);
+
+            embed.addFields({ name: 'Categories', value: [...this.commandListByCategory.keys()].join('\n') });
             return;
         }
 
@@ -195,24 +207,33 @@ export class HelpCommand<Bot extends PandaDiscordBot = PandaDiscordBot> extends 
         if (cmd) {
             // Query is a global command.
             embed.setTitle(`${prefix}${fullName} ${this.createCommandArgsString(bot, cmd)}`);
-            embed.addField('Description', cmd.fullDescription());
-            embed.addField('Category', CommandCategoryUtil.realName(cmd.category), true);
-            embed.addField('Permission', cmd.permission, true);
-            embed.addField('Cooldown', cmd.cooldown ? ExpireAgeConversion.toString(cmd.cooldown) : 'None', true);
+            embed.addFields(
+                { name: 'Description', value: cmd.fullDescription() },
+                { name: 'Category', value: CommandCategoryUtil.realName(cmd.category), inline: true },
+                { name: 'Permission', value: cmd.permission.name, inline: true },
+                {
+                    name: 'Cooldown',
+                    value: cmd.cooldown ? ExpireAgeConversion.toString(cmd.cooldown) : 'None',
+                    inline: true,
+                },
+            );
             if (cmd.args) {
                 const argsEntries = Object.entries(cmd.args);
                 const argumentsField: string[] = argsEntries
                     .filter(([name, config]) => !config.hidden)
                     .map(([name, config]) => `\`${bot.argString(name, config)}\` - ${config.description}`);
                 if (argumentsField.length > 0) {
-                    embed.addField('Arguments', argumentsField.join('\n'), true);
+                    embed.addFields({ name: 'Arguments', value: argumentsField.join('\n'), inline: true });
                 }
             }
             if (cmd.addHelpFields) {
                 cmd.addHelpFields(embed);
             }
             if (cmd.examples && cmd.examples.length > 0) {
-                embed.addField('Examples', cmd.examples.map(example => `${prefix}${this.name} ${example}`).join('\n'));
+                embed.addFields({
+                    name: 'Examples',
+                    value: cmd.examples.map(example => `${prefix}${this.name} ${example}`).join('\n'),
+                });
             }
             return;
         }

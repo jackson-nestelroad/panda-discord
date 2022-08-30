@@ -1,5 +1,6 @@
 import {
     ApplicationCommandOptionChoiceData,
+    ChannelType,
     CommandInteractionOption,
     GuildChannel,
     GuildMember,
@@ -201,7 +202,7 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
         parsers: {
             chat: (context, out) => {
                 const channel = context.params.bot.getChannelFromString(context.value, context.params.guildId);
-                if (!channel || channel.type !== 'GUILD_TEXT') {
+                if (!channel || !channel.isTextBased()) {
                     out.error = `Invalid channel \`${context.value}\` for argument \`${context.name}\`.`;
                 }
                 out.value = channel as GuildChannel;

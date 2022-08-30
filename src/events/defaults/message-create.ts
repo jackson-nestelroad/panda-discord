@@ -1,9 +1,9 @@
+import { EnabledCommandType, PandaDiscordBot } from '../../bot';
 import { Message, Snowflake } from 'discord.js';
 
 import { BaseEvent } from '../base';
 import { ChatCommandParameters } from '../../commands/params';
 import { CommandSource } from '../../commands/command-source';
-import { PandaDiscordBot } from '../../bot';
 import { SplitArgumentArray } from '../../util/argument-splitter';
 
 /**
@@ -34,7 +34,7 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
         }
 
         const cmd = args.shift();
-        content = content.substr(cmd.length).trim();
+        content = content.substring(cmd.length).trim();
 
         const params: ChatCommandParameters = {
             bot: this.bot,
@@ -59,6 +59,11 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
     }
 
     public async run(msg: Message) {
+        // Bot ignores message commands.
+        if ((this.bot.options.commandType & EnabledCommandType.Message) === 0) {
+            return;
+        }
+
         // User is a bot.
         if (msg.author.bot) {
             return;
@@ -83,12 +88,12 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
                     msg.content[1] === '@' &&
                     msg.content[endOfMentionString] === '>'
                 ) {
-                    const content = msg.content.substr(endOfMentionString + 1).trim();
+                    const content = msg.content.substring(endOfMentionString + 1).trim();
                     await this.runCommand(content, msg, msg.guild.id);
                 }
             }
         } else {
-            const content = msg.content.substr(prefix.length);
+            const content = msg.content.substring(prefix.length);
             await this.runCommand(content, msg, msg.guild.id);
         }
     }

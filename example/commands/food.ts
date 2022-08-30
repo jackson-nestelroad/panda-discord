@@ -1,6 +1,6 @@
 import {
-    ArgumentsConfig,
     ArgumentType,
+    ArgumentsConfig,
     CommandParameters,
     CommandTypeArray,
     ComplexCommand,
@@ -161,7 +161,11 @@ class ListAllFoodSubCommand extends SimpleCommand<ExampleBot, SharedFoodData> {
         const embed = bot.createEmbed(EmbedTemplates.Bare);
         embed.setTitle(`All Foods`);
         for (const key in FoodGroup) {
-            embed.addField(`${FoodGroup[key]} Group`, this.shared.groupToString(FoodGroup[key]), true);
+            embed.addFields({
+                name: `${FoodGroup[key]} Group`,
+                value: this.shared.groupToString(FoodGroup[key]),
+                inline: true,
+            });
         }
         await src.send({ embeds: [embed] });
     }

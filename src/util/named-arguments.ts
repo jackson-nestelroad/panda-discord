@@ -42,7 +42,7 @@ export function extractNamedArgs(args: SplitArgumentArray, pattern: NamedArgumen
             if (separatorIndex > pattern.prefix.length) {
                 name = arg.content.substring(pattern.prefix.length, separatorIndex);
                 // There should be a value after the separator, but this is not guaranteed.
-                value = arg.content.substr(separatorIndex + 1);
+                value = arg.content.substring(separatorIndex + 1);
                 if (!value) {
                     // Try using the next argument.
                     // Only use it if it is some kind of group.
@@ -60,7 +60,7 @@ export function extractNamedArgs(args: SplitArgumentArray, pattern: NamedArgumen
                 break;
             } else if (!pattern.separatorRequired && separatorIndex === -1) {
                 // No separator, must be a boolean.
-                name = arg.content.substr(pattern.prefix.length);
+                name = arg.content.substring(pattern.prefix.length);
                 value = 'true';
             } else {
                 continue;

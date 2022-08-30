@@ -35,7 +35,7 @@ export class ShowArgsCommand extends ComplexCommand<ExampleBot, ShowArgsArgs> {
             embed.setDescription('None!');
         } else {
             for (let i = 0; i < args.args.length; ++i) {
-                embed.addField(`Argument ${i}`, args.args.get(i), true);
+                embed.addFields({ name: `Argument ${i}`, value: args.args.get(i), inline: true });
             }
         }
         await src.send({ embeds: [embed] });

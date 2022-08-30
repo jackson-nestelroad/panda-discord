@@ -1,13 +1,13 @@
 import {
-    AnyChannel,
     ApplicationCommandManager,
+    Awaitable,
     Channel,
     Client,
     ClientOptions,
+    EmbedBuilder,
+    GatewayIntentBits,
     GuildApplicationCommandManager,
     GuildMember,
-    Intents,
-    MessageEmbed,
     Role,
     Snowflake,
     User,
@@ -15,7 +15,6 @@ import {
 import { ArgumentSplitter, SplitArgumentArray } from './util/argument-splitter';
 import { ArgumentType, SingleArgumentConfig } from './commands/arguments';
 import { CommandConfig, CommandMap, CommandTypeArray } from './commands/config';
-import { CommandPermissionValidatorConfig, DefaultCommandPermission } from './commands/permission';
 import { DiscordUtil, Mentionable } from './util/discord';
 import { EmbedOptions, EmbedProps, EmbedTemplates } from './embeds/options';
 import { EventConfig, EventMap, EventTypeArray } from './events/config';
@@ -30,6 +29,7 @@ import {
 import { BaseCommand } from './commands/base';
 import { BaseEvent } from './events/base';
 import { CommandParameters } from './commands/params';
+import { CommandPermissionOptions } from './commands/permission';
 import { CommandSource } from './commands/command-source';
 import { DefaultInteractionCreateEvent } from './events/defaults/interaction-create';
 import { DefaultMessageCreateEvent } from './events/defaults/message-create';
@@ -55,6 +55,20 @@ export enum NamedArgsOption {
      * Always parse named arguments, regardless of if they are used or not.
      */
     Always,
+}
+
+/**
+ * Option for the type of commands for the bot to use.
+ */
+export enum EnabledCommandType {
+    /**
+     * Message commands.
+     */
+    Message = 1 << 0,
+    /**
+     * Slash commands.
+     */
+    Slash = 1 << 1,
 }
 
 /**
@@ -111,13 +125,18 @@ export interface PandaOptions {
      * Specifies how the bot should handle arguments in the form `--arg=value`.
      */
     namedArgs?: NamedArgsOption;
+
+    /**
+     * The type of commands the bot should serve.
+     */
+    commandType?: EnabledCommandType;
 }
 
 type CompletePandaOptions = { [option in keyof PandaOptions]-?: PandaOptions[option] };
 
 const defaultOptions: CompletePandaOptions = {
     client: {
-        intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
+        intents: [GatewayIntentBits.Guilds],
     },
     commands: [HelpCommand, PingCommand],
     events: [DefaultMessageCreateEvent, DefaultReadyEvent],
@@ -125,15 +144,8 @@ const defaultOptions: CompletePandaOptions = {
     cooldownOffensesForTimeout: 5,
     owner: null,
     namedArgs: NamedArgsOption.Always,
+    commandType: EnabledCommandType.Slash,
 };
-
-export interface PandaDiscordBot {
-    /**
-     * Maps a command permission string to how it should be validated by
-     * the bot.
-     */
-    readonly permissionValidators?: CommandPermissionValidatorConfig<this>;
-}
 
 /**
  * Discord bot that uses the Panda command framework.
@@ -148,6 +160,11 @@ export abstract class PandaDiscordBot {
      * All command categories for the bot.
      */
     public abstract readonly commandCategories: string[];
+
+    /**
+     * All command permissions for the bot.
+     */
+    public abstract commandPermissions: CommandPermissionOptions<this>[];
 
     /**
      * Pattern for detecting and parsing named arguments.
@@ -262,28 +279,6 @@ export abstract class PandaDiscordBot {
     }
 
     /**
-     * Sets the default command permission validators if they are not set by
-     * the deriving class.
-     */
-    protected setDefaultPermissionValidators() {
-        // Deriving class did not set an object at all, so we must set it ourselves.
-        if (!this.permissionValidators) {
-            this['permissionValidators' as string] = {};
-        }
-
-        if (!this.permissionValidators[DefaultCommandPermission.Everyone]) {
-            this.permissionValidators[DefaultCommandPermission.Everyone] = () => {
-                return true;
-            };
-        }
-        if (!this.permissionValidators[DefaultCommandPermission.Owner]) {
-            this.permissionValidators[DefaultCommandPermission.Owner] = params => {
-                return params.src.author.id === this.options.owner;
-            };
-        }
-    }
-
-    /**
      * Get the proper command manager this command would belong to.
      * @param cmd Command to search for.
      * @returns Command manager the command should belong to.
@@ -311,7 +306,7 @@ export abstract class PandaDiscordBot {
 
         // Look through all of the commands that currently exist as slash commands
         // and delete ones that have been removed from the bot.
-        for (const [id, commandData] of this.client.application.commands.cache) {
+        for (const [_, commandData] of this.client.application.commands.cache) {
             // This command has been removed altogether, or it has been moved to a guild.
             const cmd = this.commands.get(commandData.name);
             if (!cmd || !cmd.isSlashCommand || cmd.slashGuildId) {
@@ -336,11 +331,11 @@ export abstract class PandaDiscordBot {
                 const old = cmdManager.cache.find(cmd => cmd.name === name);
                 if (old) {
                     if (DiscordUtil.slashCommandNeedsUpdate(old, newData)) {
-                        console.log(`Editing ${name}`);
+                        console.log(`Editing /${name}`);
                         await cmdManager.edit(old, newData);
                     }
                 } else {
-                    console.log(`Creating ${name}`);
+                    console.log(`Creating /${name}`);
                     await cmdManager.create(newData);
                 }
             } else {
@@ -348,7 +343,7 @@ export abstract class PandaDiscordBot {
                 const cmdManager = await this.getCommandManager(cmd);
                 const old = cmdManager.cache.find(cmd => cmd.name === name);
                 if (old) {
-                    console.log(`Deleting ${name}`);
+                    console.log(`Deleting /${name}`);
                     await cmdManager.delete(old);
                 }
             }
@@ -368,12 +363,22 @@ export abstract class PandaDiscordBot {
         }
     }
 
+    public async deleteAllSlashCommands() {
+        await this.client.application.commands.set([]);
+        for (const [_, guild] of this.client.guilds.cache) {
+            await guild.commands.fetch();
+            if (guild.commands.cache.size !== 0) {
+                await guild.commands.set([]);
+            }
+        }
+    }
+
     /**
      * Creates an embed using a template or options object.
      * @param options Options for the embed.
      * @returns New message embed instance.
      */
-    public createEmbed(options: EmbedProps | EmbedOptions = new EmbedOptions()): MessageEmbed {
+    public createEmbed(options: EmbedProps | EmbedOptions = new EmbedOptions()): EmbedBuilder {
         if (!(options instanceof EmbedOptions)) {
             options = new EmbedOptions(options);
         }
@@ -431,9 +436,8 @@ export abstract class PandaDiscordBot {
      */
     public argString(name: string, config: SingleArgumentConfig): string {
         let str: string = config.named
-            ? `${this.namedArgsPattern.prefix}${name}${
-                  config.type === ArgumentType.Boolean ? '' : `${this.namedArgsPattern.separator}...`
-              }`
+            ? `${this.namedArgsPattern.prefix}${name}${config.type === ArgumentType.Boolean ? '' : `${this.namedArgsPattern.separator}...`
+            }`
             : name;
         return config.required ? str : `(${str})`;
     }
@@ -456,7 +460,7 @@ export abstract class PandaDiscordBot {
      * @param mention Mention string.
      * @returns Channel that was mentioned.
      */
-    public getChannelFromMention(mention: string): AnyChannel | null {
+    public getChannelFromMention(mention: string): Channel | null {
         const match = DiscordUtil.channelMentionRegex.exec(mention);
         if (match) {
             return this.client.channels.cache.get(match[1] as Snowflake) || null;
@@ -598,15 +602,18 @@ export abstract class PandaDiscordBot {
      * Validates if the given command and parameters should run.
      * @param params Command parameters.
      * @param command Command attempting to run.
-     * @returns Promise for if the command should run.
+     * @returns If the command should run.
      * True to run, false to not run.
      */
     public validate(params: CommandParameters<this>, command: BaseCommand): boolean {
-        const validator = this.permissionValidators[command.permission];
-        if (!validator) {
-            throw new Error(`No validation found for command permission "${command.permission}".`);
+        const permission = command.permission;
+        if (permission.validate) {
+            return permission.validate(params);
         }
-        return validator(params);
+        if (permission.memberPermissions !== null && permission.memberPermissions !== undefined) {
+            return params.src.member.permissions.has(permission.memberPermissions, true);
+        }
+        return true;
     }
 
     /**
@@ -638,8 +645,8 @@ export abstract class PandaDiscordBot {
                         const slowDownMessage =
                             cooldownSet.expireAge > 60000
                                 ? `This command can only be run once every ${ExpireAgeConversion.toString(
-                                      cooldownSet.expireAge,
-                                  )}.`
+                                    cooldownSet.expireAge,
+                                )}.`
                                 : 'Slow down!';
 
                         const reply = await src.reply({ content: slowDownMessage, ephemeral: true });
@@ -665,10 +672,13 @@ export abstract class PandaDiscordBot {
      * Fetches the prefix for the guild.
      *
      * Allows different prefixes to be supported for different guilds.
+     *
      * Simply return a single string to use a universal prefix.
+     *
+     * Return `undefined` to use no prefix, which means message commands are disabled unless the bot is mentioned.
      * @param guildId
      */
-    public abstract getPrefix(guildId: Snowflake): Promise<string>;
+    public abstract getPrefix(guildId: Snowflake): Awaitable<string>;
 
     /**
      * Run the bot, logging in with the given bot token.
@@ -677,7 +687,6 @@ export abstract class PandaDiscordBot {
     public async run(token: string) {
         try {
             this.validateInternalAttributes();
-            this.setDefaultPermissionValidators();
             if (this.initialize) {
                 await this.initialize();
             }

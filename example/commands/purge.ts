@@ -6,8 +6,8 @@ import {
     EmbedTemplates,
     StandardCooldowns,
 } from '../../src';
+import { ChannelType, GuildMember, TextChannel } from 'discord.js';
 import { CommandCategory, CommandPermission, ExampleBot } from '../example-bot';
-import { GuildMember, TextChannel } from 'discord.js';
 
 interface PurgeArgs {
     user: GuildMember;
@@ -42,7 +42,7 @@ export class PurgeCommand extends ComplexCommand<ExampleBot, PurgeArgs> {
             required: false,
             transformers: {
                 any: (channel, result) => {
-                    if (channel.type !== 'GUILD_TEXT') {
+                    if (!channel.isTextBased()) {
                         result.error = 'Channel must be a text channel.';
                     } else {
                         result.value = channel as TextChannel;

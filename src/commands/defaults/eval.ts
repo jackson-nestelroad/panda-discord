@@ -22,8 +22,6 @@ export class EvalCommand extends ComplexCommand<PandaDiscordBot, EvalArgs> {
     public category = DefaultCommandCategory.Secret;
     public permission = DefaultCommandPermission.Owner;
 
-    public disableSlash = true;
-
     public args: ArgumentsConfig<EvalArgs> = {
         code: {
             description: 'Code to run. May be put in a code line or code block.',
@@ -62,7 +60,7 @@ export class EvalCommand extends ComplexCommand<PandaDiscordBot, EvalArgs> {
             clearInterval,
         });
         if (res.length > this.maxLength) {
-            res = res.substr(0, this.maxLength) + '...';
+            res = res.substring(0, this.maxLength) + '...';
         }
         res = res.replace(this.sensitivePattern, '???');
         if (!args.silent) {

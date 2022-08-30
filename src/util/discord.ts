@@ -1,4 +1,4 @@
-import { ApplicationCommand, ChatInputApplicationCommandData, GuildMember, Role, User } from 'discord.js';
+import { ApplicationCommand, Channel, ChatInputApplicationCommandData, GuildMember, Role, User } from 'discord.js';
 
 export type Mentionable = GuildMember | User | Role;
 
@@ -89,27 +89,6 @@ export namespace DiscordUtil {
     }
 
     /**
-     * Runtime enum type for ApplicationCommandOptionType conversion from string to integer.
-     */
-    export enum ActualApplicationCommandOptionTypeEnum {
-        SUB_COMMAND = 1,
-        SUB_COMMAND_GROUP = 2,
-        STRING = 3,
-        INTEGER = 4,
-        BOOLEAN = 5,
-        USER = 6,
-        CHANNEL = 7,
-        ROLE = 8,
-        MENTIONABLE = 9,
-        NUMBER = 10,
-    }
-
-    /**
-     * String options for application command options.
-     */
-    export type ActualApplicationCommandOptionTypeNames = keyof typeof ActualApplicationCommandOptionTypeEnum;
-
-    /**
      * Checks deep equality of two objects.
      * @param a First object.
      * @param b Second object.
@@ -149,7 +128,11 @@ export namespace DiscordUtil {
         // First check description and options length.
         let needsUpdate = old.name !== newData.name;
         needsUpdate ||= old.description !== newData.description;
-        needsUpdate ||= !!old.defaultPermission !== !!newData.defaultPermission;
+        needsUpdate ||= !(
+            old.defaultMemberPermissions?.equals(newData.defaultMemberPermissions) ??
+            newData.defaultMemberPermissions === null
+        );
+        needsUpdate ||= old.dmPermission !== newData.dmPermission;
         needsUpdate ||= old.options.length !== (newData.options?.length ?? 0);
 
         // Options lengths are the same, so check every option.

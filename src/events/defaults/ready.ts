@@ -1,4 +1,6 @@
-import { PandaDiscordBot } from '../../bot';
+import { EnabledCommandType, PandaDiscordBot } from '../../bot';
+
+import { ActivityType } from 'discord.js';
 import { BaseEvent } from '../base';
 
 /**
@@ -11,10 +13,16 @@ export class DefaultReadyEvent extends BaseEvent<'ready'> {
 
     public async run() {
         console.log(`Bot is logged in as ${this.bot.client.user.tag}.`);
-        this.bot.client.user.setActivity(`@${this.bot.name} help`, {
-            type: 'PLAYING',
+        const helpPrefix =
+            (this.bot.options.commandType & EnabledCommandType.Message) !== 0 ? `@${this.bot.name} ` : '/';
+        this.bot.client.user.setActivity(`${helpPrefix}help`, {
+            type: ActivityType.Playing,
         });
 
-        await this.bot.createAndEnableSlashCommands();
+        if ((this.bot.options.commandType & EnabledCommandType.Slash) !== 0) {
+            await this.bot.createAndEnableSlashCommands();
+        } else {
+            await this.bot.deleteAllSlashCommands();
+        }
     }
 }
