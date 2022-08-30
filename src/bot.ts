@@ -363,6 +363,11 @@ export abstract class PandaDiscordBot {
         }
     }
 
+    /**
+     * Deletes all slash commands.
+     *
+     * This can be an expensive operation depending on the number of guilds.
+     */
     public async deleteAllSlashCommands() {
         await this.client.application.commands.set([]);
         for (const [_, guild] of this.client.guilds.cache) {
@@ -436,8 +441,9 @@ export abstract class PandaDiscordBot {
      */
     public argString(name: string, config: SingleArgumentConfig): string {
         let str: string = config.named
-            ? `${this.namedArgsPattern.prefix}${name}${config.type === ArgumentType.Boolean ? '' : `${this.namedArgsPattern.separator}...`
-            }`
+            ? `${this.namedArgsPattern.prefix}${name}${
+                  config.type === ArgumentType.Boolean ? '' : `${this.namedArgsPattern.separator}...`
+              }`
             : name;
         return config.required ? str : `(${str})`;
     }
@@ -645,8 +651,8 @@ export abstract class PandaDiscordBot {
                         const slowDownMessage =
                             cooldownSet.expireAge > 60000
                                 ? `This command can only be run once every ${ExpireAgeConversion.toString(
-                                    cooldownSet.expireAge,
-                                )}.`
+                                      cooldownSet.expireAge,
+                                  )}.`
                                 : 'Slow down!';
 
                         const reply = await src.reply({ content: slowDownMessage, ephemeral: true });

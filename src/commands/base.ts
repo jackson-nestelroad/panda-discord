@@ -110,6 +110,10 @@ namespace InternalCommandModifiers {
     LegacyCommand ---           A parameterized command that specifies custom parsing for
                                 chat commands. Commands that specify arguments using
                                 special formatting must use their own parser.
+                                
+                                NOTE: LegacyCommand's can be completely replaced using
+                                named arguments.
+    
     NestedCommand ---           A command with one level of subcommands. Nested commands
                                 delegate running the command to a subcommand based on the
                                 first argument.
@@ -132,11 +136,13 @@ namespace InternalCommandModifiers {
         /8ball (question) ---           BaseCommand >>> ParameterizedCommand >>> ComplexCommand
                 One argument which is trivial to parse, so this command is complex.
 
-        /say (#channel) message ---     BaseCommand >>> ParameterizedCommand >>> LegacyCommand
+        /say (#channel) message ---     BaseCommand >>> ParameterizedCommand >>> ComplexCommand
                 Two arguments, but they are not trivial to parse, since the `#channel`
-                argument may or may not be specified. This would obviously be trivial
-                as a slash command, but it needs special parsing if ran as a chat
-                command, so a legacy command works well here.
+                argument may or may not be specified. This is trivial as a slash command,
+                and named arguments can be used for the chat command.
+                Examples:   !say --channel=#general Hello, world!
+                            !say Hello, world! --channel=#general
+           
         
         /message-listener add code ---  BaseCommand >>> NestedCommand
         /message-listener remove id
@@ -764,8 +770,9 @@ export abstract class ComplexCommand<
 
 /**
  * A command that implements its own parsing within the command itself.
- * Some commands have very complex parsing methods, which make slash commands impractical.
- * Thus, legacy commands allow chat-only commands to be expressed without having to set up an arguments object.
+ * Some commands have very complex parsing methods that must be manually specified.
+ *
+ * Use named arguments on `ComplexCommand`s in place of `LegacyCommand`.
  */
 export abstract class LegacyCommand<
     Bot extends PandaDiscordBot,

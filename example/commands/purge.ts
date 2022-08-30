@@ -6,8 +6,8 @@ import {
     EmbedTemplates,
     StandardCooldowns,
 } from '../../src';
-import { ChannelType, GuildMember, TextChannel } from 'discord.js';
 import { CommandCategory, CommandPermission, ExampleBot } from '../example-bot';
+import { GuildMember, TextChannel } from 'discord.js';
 
 interface PurgeArgs {
     user: GuildMember;

@@ -15,6 +15,7 @@ export interface CommandPermissionOptions<Bot extends PandaDiscordBot = PandaDis
     name: string;
     hidden?: boolean;
     inherit?: boolean;
+
     /**
      * Member permissions required to execute the command.
      *
@@ -22,6 +23,10 @@ export interface CommandPermissionOptions<Bot extends PandaDiscordBot = PandaDis
      * Otherwise, use a bit string constructed from `PermissionFlagsBits`.
      */
     memberPermissions?: PermissionResolvable;
+
+    /**
+     * Custom validation function that takes precedence over member permissions.
+     */
     validate?: CommandPermissionValidator<Bot>;
 }
 
