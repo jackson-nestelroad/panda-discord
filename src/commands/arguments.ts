@@ -1,8 +1,9 @@
 import {
+    ApplicationCommandOptionAllowedChannelTypes,
     ApplicationCommandOptionChoiceData,
-    ChannelType,
+    Attachment,
     CommandInteractionOption,
-    GuildChannel,
+    GuildBasedChannel,
     GuildMember,
     Role,
     User,
@@ -45,6 +46,8 @@ export enum ArgumentType {
 
     Number = 10, // A floating point number.
 
+    Attachment = 11, // An attachment.
+
     RestOfContent = 100, // The rest of the content in the message that has not been parsed.
     // Chat commands implement this trivially in parsing.
     // Slash commands implement this as a string, since they can take spaces.
@@ -68,7 +71,7 @@ type ArgumentTypeResultMap<A extends ArgumentType> = A extends ArgumentType.Stri
     : A extends ArgumentType.User
     ? GuildMember
     : A extends ArgumentType.Channel
-    ? GuildChannel
+    ? GuildBasedChannel
     : A extends ArgumentType.Role
     ? Role
     : A extends ArgumentType.Mentionable
@@ -77,6 +80,8 @@ type ArgumentTypeResultMap<A extends ArgumentType> = A extends ArgumentType.Stri
     ? string
     : A extends ArgumentType.Number
     ? number
+    : A extends ArgumentType.Attachment
+    ? Attachment
     : A extends ArgumentType.SplitArguments
     ? SplitArgumentArray
     : never;
@@ -94,8 +99,12 @@ export interface ChatCommandArgumentParsingContext<Bot extends PandaDiscordBot> 
     name: string;
     // The config data set up for the argument in the command.
     config: SingleArgumentConfig;
+    // If the argument is given as a named argument.
+    isNamed: boolean;
     // The current index in the params.args array.
     i: number;
+    // The current index in the params.src.attachments collection.
+    attachmentIndex: number;
     // Parameters for the chat command.
     params: ChatCommandParameters<Bot>;
 }
@@ -113,6 +122,7 @@ export interface ArgumentParserResult<T = DefaultT> {
 
 export interface ArgumentTypeMetadata<Bot extends PandaDiscordBot, A extends ArgumentType = ArgumentType> {
     asyncChatParser?: true;
+    readsFromArgs?: boolean;
     parsers: {
         chat: (
             context: ChatCommandArgumentParsingContext<Bot>,
@@ -202,13 +212,13 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
         parsers: {
             chat: (context, out) => {
                 const channel = context.params.bot.getChannelFromString(context.value, context.params.guildId);
-                if (!channel || !channel.isTextBased()) {
+                if (!channel || channel.isDMBased()) {
                     out.error = `Invalid channel \`${context.value}\` for argument \`${context.name}\`.`;
                 }
-                out.value = channel as GuildChannel;
+                out.value = channel as GuildBasedChannel;
             },
             slash: (option, out) => {
-                out.value = option.channel as GuildChannel;
+                out.value = option.channel as GuildBasedChannel;
             },
         },
     },
@@ -260,6 +270,28 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
             },
             slash: (option, out) => {
                 out.value = option.value as number;
+            },
+        },
+    },
+    [ArgumentType.Attachment]: {
+        readsFromArgs: false,
+        parsers: {
+            chat: (context, out) => {
+                if (!context.params.src.isMessage()) {
+                    return;
+                }
+                if (context.value && context.params.src.message.attachments.has(context.value)) {
+                    out.value = context.params.src.message.attachments.get(context.value);
+                } else {
+                    const nextAttachment = context.params.src.message.attachments.at(context.attachmentIndex++);
+                    if (!nextAttachment) {
+                        throw new Error(`Missing attachment for argument \`${context.name}\`.`);
+                    }
+                    out.value = nextAttachment;
+                }
+            },
+            slash: (option, out) => {
+                out.value = option.attachment;
             },
         },
     },
@@ -317,6 +349,9 @@ type SingleTypedSingleArgumentConfig<A extends ArgumentType = ArgumentType, P = 
     type: A;
     default?: ArgumentTypeResultMap<A>;
     choices?: ArgumentTypeResultMap<A> extends string | number ? ApplicationCommandOptionChoiceData[] : never;
+    channelTypes?: ArgumentTypeResultMap<A> extends GuildBasedChannel
+        ? ApplicationCommandOptionAllowedChannelTypes[]
+        : never;
 } & (ArgumentTypeResultMap<A> extends P // If not, then the user must define at least one transformer to make the conversion possible // If we can assign the type we parse to P, then transformers are optional
     ? {
           transformers?: SingleArgumentTransformersOptionalConfig<ArgumentTypeResultMap<A>, P>;
@@ -336,6 +371,7 @@ type TypedSingleArgumentConfig<P = unknown> =
     | SingleTypedSingleArgumentConfig<ArgumentType.Mentionable, P>
     | SingleTypedSingleArgumentConfig<ArgumentType.RestOfContent, P>
     | SingleTypedSingleArgumentConfig<ArgumentType.Number, P>
+    | SingleTypedSingleArgumentConfig<ArgumentType.Attachment, P>
     | SingleTypedSingleArgumentConfig<ArgumentType.SplitArguments, P>;
 
 // Parts of the argument config that do not depend on types.

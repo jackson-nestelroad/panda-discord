@@ -24,7 +24,6 @@ import { CommandMap, CommandTypeArray } from './config';
 import { ExpireAge, ExpireAgeFormat, TimedCache } from '../util/timed-cache';
 
 import { CommandPermissionOptions } from './permission';
-import { DiscordUtil } from '../util/discord';
 import { NamedArgsOption } from '..';
 import { PandaDiscordBot } from '../bot';
 import { SplitArgumentArray } from '../util/argument-splitter';
@@ -180,10 +179,16 @@ export interface BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot, Shar
     readonly disableSlash?: boolean;
 
     /**
+     * Enables this command in direct messages.
+     * Default is false.
+     */
+    readonly enableInDM?: boolean;
+
+    /**
      * Override for which member permissions are required to execute the command.
      * By default, the member permissions on the command permission are used.
      */
-    readonly memberPermissionRequired?: PermissionResolvable;
+    readonly memberPermissions?: PermissionResolvable;
 
     /**
      * Disables parsing named arguments.
@@ -406,8 +411,8 @@ export abstract class SimpleCommand<Bot extends PandaDiscordBot, Shared = never>
             name: this.name,
             description: this.description,
             options: undefined,
-            defaultMemberPermissions: this.permission.memberPermissions ?? null,
-            dmPermission: false,
+            defaultMemberPermissions: this.memberPermissions ?? this.permission.memberPermissions ?? null,
+            dmPermission: this.slashGuildId ? null : !!this.enableInDM,
         };
     }
 
@@ -527,10 +532,11 @@ abstract class ParameterizedCommand<
                         type: ParameterizedCommand.convertArgumentType(config.type),
                         required: config.required,
                         choices: config.choices?.length !== 0 ? config.choices : undefined ?? undefined,
+                        channelTypes: config.channelTypes?.length !== 0 ? config.channelTypes : undefined ?? undefined,
                     } as ApplicationCommandOptionData;
                 }),
-            defaultMemberPermissions: this.permission.memberPermissions ?? null,
-            dmPermission: false,
+            defaultMemberPermissions: this.memberPermissions ?? this.permission.memberPermissions ?? null,
+            dmPermission: this.slashGuildId ? null : !!this.enableInDM,
         };
     }
 
@@ -596,6 +602,17 @@ export abstract class ComplexCommand<
     ): Promise<ArgumentParserResult['value']> {
         const typeConfig: ArgumentTypeMetadata<Bot> = ArgumentTypeConfig[context.config.type];
 
+        // If this type does not read from arguments, move backwards so that the current argument is used later.
+        // For instance, attachments are retrieved off of the message itself.
+        if (typeConfig.readsFromArgs === false) {
+            --context.i;
+            // If using named arguments, the value should be given to the parser.
+            // If not, there is no value to give.
+            if (!context.isNamed) {
+                context.value = undefined;
+            }
+        }
+
         // Call the correct parser for the argument type.
         const result: ArgumentParserResult = {};
         if (typeConfig.asyncChatParser) {
@@ -637,6 +654,8 @@ export abstract class ComplexCommand<
             name: null,
             config: null,
             i: 0,
+            attachmentIndex: 0,
+            isNamed: false,
             params,
         };
 
@@ -676,6 +695,7 @@ export abstract class ComplexCommand<
                 context.name = name;
                 context.config = config;
                 context.value = value;
+                context.isNamed = true;
                 // We need to fake the args array here in case an argument that uses it shows up.
                 context.i = 0;
                 context.params.args = SplitArgumentArray.Fake(value);
@@ -692,7 +712,8 @@ export abstract class ComplexCommand<
             // has no named arguments.
             // Clearly unnamed arguments override any named ones.
             context.i = 0;
-            params.args = unnamed;
+            context.isNamed = false;
+            context.params.args = unnamed;
         }
 
         // Index of the next command argument in order.
@@ -859,8 +880,8 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
 
         data.name = this.name;
         data.description = this.description;
-        data.defaultMemberPermissions = this.permission.memberPermissions ?? null;
-        data.dmPermission = false;
+        data.defaultMemberPermissions = this.memberPermissions ?? this.permission.memberPermissions ?? null;
+        data.dmPermission = this.slashGuildId ? null : !!this.enableInDM;
         data.options = [];
 
         for (const [key, cmd] of [...this.subcommandMap.entries()]) {

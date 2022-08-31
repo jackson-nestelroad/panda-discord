@@ -1,4 +1,4 @@
-import { ApplicationCommand, Channel, ChatInputApplicationCommandData, GuildMember, Role, User } from 'discord.js';
+import { ApplicationCommand, ChatInputApplicationCommandData, GuildMember, Role, User } from 'discord.js';
 
 export type Mentionable = GuildMember | User | Role;
 
@@ -150,7 +150,8 @@ export namespace DiscordUtil {
                 a.type !== b.type ||
                 // Compare the choices and nested options themselves.
                 !deepEqual(a['choices'] ?? [], b['choices'] ?? []) ||
-                !deepEqual(a['options'] ?? [], b['options'] ?? []);
+                !deepEqual(a['options'] ?? [], b['options'] ?? []) ||
+                !deepEqual(a['channelTypes'] ?? [], b['channelTypes'] ?? []);
         }
         return needsUpdate;
     }

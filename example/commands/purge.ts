@@ -7,12 +7,12 @@ import {
     StandardCooldowns,
 } from '../../src';
 import { CommandCategory, CommandPermission, ExampleBot } from '../example-bot';
-import { GuildMember, TextChannel } from 'discord.js';
+import { GuildMember, TextBasedChannel } from 'discord.js';
 
 interface PurgeArgs {
     user: GuildMember;
     count: number;
-    channel?: TextChannel;
+    channel?: TextBasedChannel;
 }
 
 export class PurgeCommand extends ComplexCommand<ExampleBot, PurgeArgs> {
@@ -45,7 +45,7 @@ export class PurgeCommand extends ComplexCommand<ExampleBot, PurgeArgs> {
                     if (!channel.isTextBased()) {
                         result.error = 'Channel must be a text channel.';
                     } else {
-                        result.value = channel as TextChannel;
+                        result.value = channel as TextBasedChannel;
                     }
                 },
             },
@@ -58,6 +58,10 @@ export class PurgeCommand extends ComplexCommand<ExampleBot, PurgeArgs> {
         }
         if (!args.channel) {
             args.channel = src.channel;
+        }
+
+        if (args.channel.isDMBased()) {
+            throw new Error('Cannot purge from DMs.');
         }
 
         const channelHistory = await args.channel.messages.fetch({ limit: 100 });

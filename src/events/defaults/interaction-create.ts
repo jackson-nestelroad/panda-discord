@@ -40,7 +40,7 @@ export class DefaultInteractionCreateEvent extends BaseEvent<'interactionCreate'
                 bot: this.bot,
                 src: new CommandSource(interaction),
                 options: interaction.options,
-                guildId: interaction.guild.id,
+                guildId: interaction.guild?.id,
                 extraArgs: {},
             };
 

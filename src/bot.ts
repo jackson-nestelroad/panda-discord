@@ -357,6 +357,7 @@ export abstract class PandaDiscordBot {
     public async createAndEnableSlashCommands() {
         if (!this.slashCommandsEnabled) {
             await this.createSlashCommands();
+            console.log('Slash commands ready');
             const interactionEvent = new this.options.interactionEvent(this);
             this.events.set(interactionEvent.name, interactionEvent);
             this.slashCommandsEnabled = true;
@@ -543,12 +544,12 @@ export abstract class PandaDiscordBot {
     }
 
     /**
-     * Parses a TextChannel instance from the input string.
+     * Parses a guild channel instance from the input string.
      * First checks if the string is a mention, then checks if the string is a channel ID, then
      * checks if the string is a channel name.
      * @param str Input string.
      * @param guildId Guild ID context.
-     * @returns TextChannel instance if found, null if not found.
+     * @returns GuildBasedChannel instance if found, null if not found.
      */
     public getChannelFromString(str: string, guildId: Snowflake): Channel | null {
         // Try mention first.
@@ -605,6 +606,25 @@ export abstract class PandaDiscordBot {
     }
 
     /**
+     * Checks if the given command meets the given permission.
+     * @param params Command parameters.
+     * @param permission Permission.
+     * @returns Meets permission?
+     */
+    public meetsPermission<Bot extends PandaDiscordBot>(
+        params: CommandParameters<Bot>,
+        permission: CommandPermissionOptions,
+    ): boolean {
+        if (permission.validate) {
+            return permission.validate(params);
+        }
+        if (permission.memberPermissions !== null && permission.memberPermissions !== undefined) {
+            return params.src.member.permissions.has(permission.memberPermissions, true);
+        }
+        return true;
+    }
+
+    /**
      * Validates if the given command and parameters should run.
      * @param params Command parameters.
      * @param command Command attempting to run.
@@ -615,6 +635,9 @@ export abstract class PandaDiscordBot {
         const permission = command.permission;
         if (permission.validate) {
             return permission.validate(params);
+        }
+        if (command.memberPermissions) {
+            return params.src.member.permissions.has(command.memberPermissions, true);
         }
         if (permission.memberPermissions !== null && permission.memberPermissions !== undefined) {
             return params.src.member.permissions.has(permission.memberPermissions, true);

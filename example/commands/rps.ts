@@ -31,6 +31,8 @@ export class RpsCommand extends ComplexCommand<PandaDiscordBot, RpsArgs> {
     public permission = CommandPermission.Everyone;
     public cooldown = StandardCooldowns.Low;
 
+    public enableInDM = true;
+
     public readonly choiceMap: { [choice in RpsChoice]: RpsChoiceConfig } = {
         [RpsChoice.Rock]: {
             beats: new Set([RpsChoice.Scissors]),

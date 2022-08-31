@@ -19,6 +19,8 @@ export class EightBallCommand extends ComplexCommand<ExampleBot, EightBallArgs> 
     public permission = CommandPermission.Everyone;
     public cooldown = StandardCooldowns.Low;
 
+    public enableInDM = true;
+
     public args: ArgumentsConfig<EightBallArgs> = {
         question: {
             description: 'Question to ask.',

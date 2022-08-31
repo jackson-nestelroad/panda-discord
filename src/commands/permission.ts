@@ -1,4 +1,4 @@
-import { PermissionFlagsBits, PermissionResolvable } from 'discord.js';
+import { GuildMember, PermissionFlagsBits, PermissionResolvable } from 'discord.js';
 
 import { CommandParameters } from './params';
 import { PandaDiscordBot } from '../bot';

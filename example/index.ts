@@ -5,8 +5,13 @@ import { ExampleBot } from './example-bot';
 import { FoodCommand } from './commands/food';
 import { GatewayIntentBits } from 'discord.js';
 import { PurgeCommand } from './commands/purge';
+import { RenameFileCommand } from './commands/rename-file';
 import { RpsCommand } from './commands/rps';
 import { ShowArgsCommand } from './commands/show-args';
+import { TopicCommand } from './commands/topic';
+import { config } from 'dotenv';
+
+config();
 
 (async () => {
     const bot = new ExampleBot({
@@ -20,6 +25,8 @@ import { ShowArgsCommand } from './commands/show-args';
             FoodCommand,
             ShowArgsCommand,
             RpsCommand,
+            TopicCommand,
+            RenameFileCommand,
         ],
         client: {
             intents: [

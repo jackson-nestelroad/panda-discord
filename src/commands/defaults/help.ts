@@ -210,7 +210,11 @@ export class HelpCommand<Bot extends PandaDiscordBot = PandaDiscordBot> extends 
             embed.addFields(
                 { name: 'Description', value: cmd.fullDescription() },
                 { name: 'Category', value: CommandCategoryUtil.realName(cmd.category), inline: true },
-                { name: 'Permission', value: cmd.permission.name, inline: true },
+                {
+                    name: 'Permission',
+                    value: `${cmd.permission.name}${cmd.memberPermissions ? ' (with permissions)' : ''}`,
+                    inline: true,
+                },
                 {
                     name: 'Cooldown',
                     value: cmd.cooldown ? ExpireAgeConversion.toString(cmd.cooldown) : 'None',

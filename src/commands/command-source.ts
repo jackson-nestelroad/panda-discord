@@ -7,7 +7,8 @@ import {
     MessageEditOptions,
     MessageOptions,
     ReplyMessageOptions,
-    TextChannel,
+    Snowflake,
+    TextBasedChannel,
     User,
     WebhookEditMessageOptions,
 } from 'discord.js';
@@ -153,12 +154,26 @@ export class CommandSource {
     }
 
     /**
+     * Guild ID the command was initiated in.
+     */
+    public get guildId(): Snowflake {
+        return this.native.guildId;
+    }
+
+    /**
      * Channel the command was initiated in.
      *
      * Guaranteed to be a text channel because commands are only text-based.
      */
-    public get channel(): TextChannel {
-        return this.native.channel as TextChannel;
+    public get channel(): TextBasedChannel {
+        return this.native.channel as TextBasedChannel;
+    }
+
+    /**
+     * Channel ID the command was initiated in.
+     */
+    public get channelId(): Snowflake {
+        return this.native.channelId;
     }
 
     /**
