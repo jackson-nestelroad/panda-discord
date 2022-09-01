@@ -38,7 +38,7 @@ config();
             ],
         },
         namedArgs: NamedArgsOption.IfNeeded,
-        commandType: EnabledCommandType.Message | EnabledCommandType.Slash,
+        commandType: EnabledCommandType.Chat | EnabledCommandType.Slash,
     });
     await bot.run(process.env.TOKEN);
 })().catch(error => {

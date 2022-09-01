@@ -59,8 +59,8 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
     }
 
     public async run(msg: Message) {
-        // Bot ignores message commands.
-        if ((this.bot.options.commandType & EnabledCommandType.Message) === 0) {
+        // Bot ignores chat commands.
+        if ((this.bot.options.commandType & EnabledCommandType.Chat) === 0) {
             return;
         }
 

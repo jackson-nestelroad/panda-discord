@@ -62,9 +62,9 @@ export enum NamedArgsOption {
  */
 export enum EnabledCommandType {
     /**
-     * Message commands.
+     * Chat (message) commands.
      */
-    Message = 1 << 0,
+    Chat = 1 << 0,
     /**
      * Slash commands.
      */
@@ -442,9 +442,8 @@ export abstract class PandaDiscordBot {
      */
     public argString(name: string, config: SingleArgumentConfig): string {
         let str: string = config.named
-            ? `${this.namedArgsPattern.prefix}${name}${
-                  config.type === ArgumentType.Boolean ? '' : `${this.namedArgsPattern.separator}...`
-              }`
+            ? `${this.namedArgsPattern.prefix}${name}${config.type === ArgumentType.Boolean ? '' : `${this.namedArgsPattern.separator}...`
+            }`
             : name;
         return config.required ? str : `(${str})`;
     }
@@ -674,8 +673,8 @@ export abstract class PandaDiscordBot {
                         const slowDownMessage =
                             cooldownSet.expireAge > 60000
                                 ? `This command can only be run once every ${ExpireAgeConversion.toString(
-                                      cooldownSet.expireAge,
-                                  )}.`
+                                    cooldownSet.expireAge,
+                                )}.`
                                 : 'Slow down!';
 
                         const reply = await src.reply({ content: slowDownMessage, ephemeral: true });
@@ -704,7 +703,7 @@ export abstract class PandaDiscordBot {
      *
      * Simply return a single string to use a universal prefix.
      *
-     * Return `undefined` to use no prefix, which means message commands are disabled unless the bot is mentioned.
+     * Return `undefined` to use no prefix, which means chat commands are disabled unless the bot is mentioned.
      * @param guildId
      */
     public abstract getPrefix(guildId: Snowflake): Awaitable<string>;

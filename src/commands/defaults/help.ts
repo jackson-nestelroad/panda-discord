@@ -139,7 +139,7 @@ export class HelpCommand<Bot extends PandaDiscordBot = PandaDiscordBot> extends 
         embed.setAuthor({ name: bot.name + ' Commands', iconURL: bot.avatarUrl });
         // Prefix defaults to slash.
         const prefix =
-            (bot.options.commandType & EnabledCommandType.Message) !== 0 ? (await bot.getPrefix(guildId)) ?? '/' : '/';
+            (bot.options.commandType & EnabledCommandType.Chat) !== 0 ? (await bot.getPrefix(guildId)) ?? '/' : '/';
         const query = args.query;
 
         if (!query) {
@@ -147,7 +147,7 @@ export class HelpCommand<Bot extends PandaDiscordBot = PandaDiscordBot> extends 
             embed.setTitle('All Command Categories');
 
             let description = '';
-            if ((bot.options.commandType & EnabledCommandType.Message) !== 0) {
+            if ((bot.options.commandType & EnabledCommandType.Chat) !== 0) {
                 description += `You may also use \`@${bot.name} cmd\` to run any command.`;
                 if ((bot.options.commandType & EnabledCommandType.Slash) !== 0) {
                     description += ' All commands are also available as slash commands.';
