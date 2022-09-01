@@ -49,6 +49,9 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
         if (this.bot.commands.has(cmd)) {
             try {
                 const command = this.bot.commands.get(cmd);
+                if (command.disableChat) {
+                    return;
+                }
                 if (this.bot.validate(params, command)) {
                     await command.executeChat(params);
                 }

@@ -173,6 +173,12 @@ export interface BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot, Shar
     readonly examples?: string[];
 
     /**
+     * Prevent this command from being used as a chat command.
+     * Default is false;
+     */
+    readonly disableChat?: boolean;
+
+    /**
      * Prevent this command from being added as a slash command.
      * Default is false.
      */
@@ -441,7 +447,7 @@ abstract class ParameterizedCommand<
     Bot extends PandaDiscordBot,
     Args extends object,
     Shared = never,
-> extends BaseCommand<Bot, Shared> {
+    > extends BaseCommand<Bot, Shared> {
     // Stronger typing for the args configuration.
     public abstract readonly args: ArgumentsConfig<Args>;
 
@@ -587,7 +593,7 @@ export abstract class ComplexCommand<
     Bot extends PandaDiscordBot,
     Args extends object,
     Shared = never,
-> extends ParameterizedCommand<Bot, Args, Shared> {
+    > extends ParameterizedCommand<Bot, Args, Shared> {
     public isNested: false = false;
 
     public argsString(bot: Bot): string {
@@ -799,7 +805,7 @@ export abstract class LegacyCommand<
     Bot extends PandaDiscordBot,
     Args extends object,
     Shared = never,
-> extends ParameterizedCommand<Bot, Args, Shared> {
+    > extends ParameterizedCommand<Bot, Args, Shared> {
     public isNested: false = false;
 
     /**
