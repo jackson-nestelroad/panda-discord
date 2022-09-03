@@ -902,7 +902,7 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
                 name: cmd.name,
                 description: cmd.description,
                 type,
-                options: subData.options?.length !== 0 ? subData.options : undefined ?? undefined,
+                options: subData.options?.length !== 0 ? subData.options : [] ?? [],
             } as ApplicationCommandSubGroupData | ApplicationCommandSubCommandData);
         }
 
