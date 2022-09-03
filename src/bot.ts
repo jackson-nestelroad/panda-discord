@@ -1,4 +1,5 @@
 import {
+    ActivityType,
     ApplicationCommandManager,
     Awaitable,
     Channel,
@@ -261,6 +262,16 @@ export abstract class PandaDiscordBot {
      */
     public get avatarUrl(): string {
         return this.client.user?.avatarURL();
+    }
+
+    /**
+     * Sets the help presence on the bot.
+     */
+    public setHelpPresence(): void {
+        const helpPrefix = (this.options.commandType & EnabledCommandType.Chat) !== 0 ? `@${this.name} ` : '/';
+        this.client.user.setActivity(`${helpPrefix}help`, {
+            type: ActivityType.Playing,
+        });
     }
 
     /**

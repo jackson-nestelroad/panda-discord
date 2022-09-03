@@ -27,6 +27,7 @@ export { BaseEvent } from './events/base';
 export { EventTypeArray, EventMap, EventConfig } from './events/config';
 export { DefaultInteractionCreateEvent } from './events/defaults/interaction-create';
 export { DefaultMessageCreateEvent } from './events/defaults/message-create';
+export { DefaultSharedResumeEvent } from './events/defaults/shard-resume';
 export { DefaultReadyEvent } from './events/defaults/ready';
 export { BaseService } from './services/base';
 export { MemberListService } from './services/member-list';
