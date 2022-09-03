@@ -416,7 +416,7 @@ export abstract class SimpleCommand<Bot extends PandaDiscordBot, Shared = never>
         return {
             name: this.name,
             description: this.description,
-            options: undefined,
+            options: [],
             defaultMemberPermissions: this.memberPermissions ?? this.permission.memberPermissions ?? null,
             dmPermission: this.slashGuildId ? null : !!this.enableInDM,
         };
@@ -447,7 +447,7 @@ abstract class ParameterizedCommand<
     Bot extends PandaDiscordBot,
     Args extends object,
     Shared = never,
-> extends BaseCommand<Bot, Shared> {
+    > extends BaseCommand<Bot, Shared> {
     // Stronger typing for the args configuration.
     public abstract readonly args: ArgumentsConfig<Args>;
 
@@ -593,7 +593,7 @@ export abstract class ComplexCommand<
     Bot extends PandaDiscordBot,
     Args extends object,
     Shared = never,
-> extends ParameterizedCommand<Bot, Args, Shared> {
+    > extends ParameterizedCommand<Bot, Args, Shared> {
     public isNested: false = false;
 
     public argsString(bot: Bot): string {
@@ -805,7 +805,7 @@ export abstract class LegacyCommand<
     Bot extends PandaDiscordBot,
     Args extends object,
     Shared = never,
-> extends ParameterizedCommand<Bot, Args, Shared> {
+    > extends ParameterizedCommand<Bot, Args, Shared> {
     public isNested: false = false;
 
     /**
