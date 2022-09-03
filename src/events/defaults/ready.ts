@@ -13,8 +13,7 @@ export class DefaultReadyEvent extends BaseEvent<'ready'> {
 
     public async run() {
         console.log(`Bot is logged in as ${this.bot.client.user.tag}.`);
-        const helpPrefix =
-            (this.bot.options.commandType & EnabledCommandType.Chat) !== 0 ? `@${this.bot.name} ` : '/';
+        const helpPrefix = (this.bot.options.commandType & EnabledCommandType.Chat) !== 0 ? `@${this.bot.name} ` : '/';
         this.bot.client.user.setActivity(`${helpPrefix}help`, {
             type: ActivityType.Playing,
         });

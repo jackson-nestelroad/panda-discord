@@ -8,6 +8,7 @@ import {
     GatewayIntentBits,
     GuildApplicationCommandManager,
     GuildMember,
+    Interaction,
     Role,
     Snowflake,
     User,
@@ -392,14 +393,56 @@ export abstract class PandaDiscordBot {
     }
 
     /**
+     * Creates a common embed for formatting errors for the user.
+     * @param error Error object, such as `Error` or string.
+     * @returns Formatted embed.
+     */
+    private createErrorEmbed(error: any): EmbedBuilder {
+        const embed = this.createEmbed(EmbedTemplates.Error);
+        embed.setDescription(error.message || error.toString());
+        return embed;
+    }
+
+    /**
      * Formats an error and sends it back to the command source.
      * @param src Source of the error to respond to.
      * @param error Error object or message.
      */
     public async sendError(src: CommandSource, error: any) {
-        const embed = this.createEmbed(EmbedTemplates.Error);
-        embed.setDescription(error.message || error.toString());
-        await src.send({ embeds: [embed], ephemeral: true });
+        await src.send({ embeds: [this.createErrorEmbed(error)], ephemeral: true });
+    }
+
+    /**
+     * Runs the given function, funneling any thrown errors to the given interaction
+     * in the same way as `sendError`.
+     *
+     * If no error occurs, the interaction is not replied to.
+     *
+     * Useful for commands that move from a command source to another interaction
+     * type, such as a modal submit, for responding to the user.
+     * @param interaction Next interaction to repy to.
+     * @param method Function to run that may throw errors.
+     * @returns `true` if no errors thrown, `false` if errors were thrown.
+     */
+    public async sendErrorsToInteraction(interaction: Interaction, method: () => Promise<void>): Promise<boolean> {
+        if (!interaction.isRepliable()) {
+            throw new Error('Cannot send errors to non-repliable interaction.');
+        }
+        try {
+            await method();
+        } catch (error) {
+            const embed = this.createErrorEmbed(error);
+            if (interaction.replied) {
+                await interaction.followUp({ embeds: [embed], ephemeral: true });
+            } else if (interaction.deferred) {
+                await interaction.editReply({ embeds: [embed] });
+            } else {
+                await interaction.reply({ embeds: [embed], ephemeral: true });
+            }
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -442,8 +485,9 @@ export abstract class PandaDiscordBot {
      */
     public argString(name: string, config: SingleArgumentConfig): string {
         let str: string = config.named
-            ? `${this.namedArgsPattern.prefix}${name}${config.type === ArgumentType.Boolean ? '' : `${this.namedArgsPattern.separator}...`
-            }`
+            ? `${this.namedArgsPattern.prefix}${name}${
+                  config.type === ArgumentType.Boolean ? '' : `${this.namedArgsPattern.separator}...`
+              }`
             : name;
         return config.required ? str : `(${str})`;
     }
@@ -673,8 +717,8 @@ export abstract class PandaDiscordBot {
                         const slowDownMessage =
                             cooldownSet.expireAge > 60000
                                 ? `This command can only be run once every ${ExpireAgeConversion.toString(
-                                    cooldownSet.expireAge,
-                                )}.`
+                                      cooldownSet.expireAge,
+                                  )}.`
                                 : 'Slow down!';
 
                         const reply = await src.reply({ content: slowDownMessage, ephemeral: true });
