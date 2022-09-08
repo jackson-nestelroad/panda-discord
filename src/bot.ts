@@ -587,8 +587,9 @@ export abstract class PandaDiscordBot {
             : guild.members.cache;
 
         // Try user ID then username.
-        if (members.has(str as Snowflake)) {
-            return members.get(str as Snowflake);
+        const memberById = members.get(str as Snowflake);
+        if (memberById) {
+            return memberById;
         }
         return (
             members.find(

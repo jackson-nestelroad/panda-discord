@@ -4,9 +4,10 @@ import { PandaDiscordBot } from '../bot';
 /**
  * Types of embeds that can be created from templates.
  */
-enum EmbedType {
+export enum EmbedType {
     Normal,
     Error,
+    Warning,
     Success,
 }
 
@@ -25,6 +26,7 @@ export class EmbedOptions {
 
     private readonly defaultColors = {
         error: '#F04947',
+        warning: '#FFBE00',
         success: '#43B581',
         blank: '#2F3136',
     } as const;
@@ -50,6 +52,9 @@ export class EmbedOptions {
             switch (this.type) {
                 case EmbedType.Error:
                     embed.setColor(this.defaultColors.error);
+                    break;
+                case EmbedType.Warning:
+                    embed.setColor(this.defaultColors.warning);
                     break;
                 case EmbedType.Success:
                     embed.setColor(this.defaultColors.success);
@@ -80,6 +85,11 @@ export namespace EmbedTemplates {
      * An embed communicating a successful operation.
      */
     export const Success = new EmbedOptions({ footer: false, type: EmbedType.Success });
+
+    /**
+     * An embed communicating a warning.
+     */
+    export const Warning = new EmbedOptions({ footer: false, type: EmbedType.Warning });
 
     /**
      * An embed communicating an error.

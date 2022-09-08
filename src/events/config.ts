@@ -1,12 +1,12 @@
-import { ClientEvents } from 'discord.js';
+import { BaseEvent, ExtendableClientEvents } from './base';
+
 import { PandaDiscordBot } from '../bot';
-import { BaseEvent } from './base';
 
 /**
  * Array of event types that can be instantiated.
  */
 export type EventTypeArray<Bot extends PandaDiscordBot = PandaDiscordBot> = (new (bot: Bot) => BaseEvent<
-    keyof ClientEvents,
+    keyof ExtendableClientEvents,
     Bot
 >)[];
 
@@ -14,8 +14,8 @@ export type EventTypeArray<Bot extends PandaDiscordBot = PandaDiscordBot> = (new
  * Maps an event name to the object that handles it.
  */
 export type EventMap<Bot extends PandaDiscordBot = PandaDiscordBot> = Map<
-    keyof ClientEvents,
-    BaseEvent<keyof ClientEvents, Bot>
+    keyof ExtendableClientEvents,
+    BaseEvent<keyof ExtendableClientEvents, Bot>
 >;
 
 export namespace EventConfig {
