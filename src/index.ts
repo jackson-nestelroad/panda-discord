@@ -15,7 +15,15 @@ export {
     NestedCommand,
 } from './commands/base';
 export { CommandCategoryUtil, DefaultCommandCategory } from './commands/category';
-export { CommandSource } from './commands/command-source';
+export {
+    CommandSource,
+    ReplyResponse,
+    EditResponse,
+    SendResponse,
+    MockCommandSourceParams,
+    MockCommandSourceBase,
+    Receivable,
+} from './commands/command-source';
 export { CommandTypeArray, CommandMap, CommandConfig } from './commands/config';
 export { EvalCommand } from './commands/defaults/eval';
 export { HelpArgs, HelpCommand } from './commands/defaults/help';

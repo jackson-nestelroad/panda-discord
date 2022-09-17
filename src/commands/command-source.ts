@@ -13,8 +13,6 @@ import {
     WebhookEditMessageOptions,
 } from 'discord.js';
 
-export type Receivable = Message | CommandInteraction;
-
 type DisableSplit = { split?: false };
 type CommonReplyOptions = ReplyMessageOptions & InteractionReplyOptions & DisableSplit;
 type CommonSendOptions = MessageOptions & InteractionReplyOptions & DisableSplit;
@@ -24,12 +22,68 @@ export type ReplyResponse = string | CommonReplyOptions;
 export type SendResponse = string | CommonSendOptions;
 export type EditResponse = string | CommonEditOptions;
 
+export interface MockCommandSourceParams {
+    member: GuildMember;
+    channel: TextBasedChannel;
+    guild: Guild;
+}
+
+export class MockCommandSourceBase implements MockCommandSourceParams {
+    constructor(public data: MockCommandSourceParams) {}
+
+    public get member(): GuildMember {
+        return this.data.member;
+    }
+    public get channel(): TextBasedChannel {
+        return this.data.channel;
+    }
+    public get guild(): Guild {
+        return this.data.guild;
+    }
+
+    public get guildId(): Snowflake {
+        return this.guild?.id;
+    }
+
+    public get channelId(): Snowflake {
+        return this.channel?.id;
+    }
+
+    public get content(): string {
+        return '';
+    }
+
+    public async delete(): Promise<void> {}
+
+    public async reply(res: ReplyResponse): Promise<Receivable> {
+        return this;
+    }
+
+    public async send(res: SendResponse): Promise<Receivable> {
+        return this;
+    }
+    public async edit(res: EditResponse): Promise<Receivable> {
+        return this;
+    }
+
+    public async append(res: string): Promise<Receivable> {
+        return this;
+    }
+
+    public async sendDirect(res: SendResponse): Promise<Receivable> {
+        return this;
+    }
+}
+
+export type Receivable = Message | CommandInteraction | MockCommandSourceBase;
+
 /**
  * All possible options for an underlying command source.
  */
 enum CommandSourceType {
     Message,
     Interaction,
+    Mock,
     Unsupported, // Default case.
 }
 
@@ -48,6 +102,10 @@ const CommandSourceTypeMap: Record<CommandSourceType, CommandSourceTypeMetadata>
         type: CommandInteraction,
         field: 'interaction',
     },
+    [CommandSourceType.Mock]: {
+        type: MockCommandSourceBase,
+        field: 'mock',
+    },
     [CommandSourceType.Unsupported]: {
         type: null as never,
         field: 'unsupported',
@@ -56,6 +114,7 @@ const CommandSourceTypeMap: Record<CommandSourceType, CommandSourceTypeMetadata>
 
 type MessageCommandSource = CommandSource & { message: Message };
 type InteractionCommandSource = CommandSource & { interaction: CommandInteraction };
+type MockCommandSource = CommandSource & { mock: MockCommandSourceBase };
 
 /**
  * A wrapper around a message or an interaction, whichever receives the command.
@@ -100,6 +159,10 @@ export class CommandSource {
         return this.type === CommandSourceType.Interaction;
     }
 
+    public isMock(): this is MockCommandSource {
+        return this.type === CommandSourceType.Mock;
+    }
+
     /**
      * Checks if the command orginates from an unsupported source.
      * @returns Is the command source unsupported?
@@ -120,6 +183,8 @@ export class CommandSource {
             return this.message.author;
         } else if (this.isInteraction()) {
             return this.interaction.user;
+        } else if (this.isMock()) {
+            return this.mock.member.user;
         }
         this.throwUnsupported();
     }
@@ -135,6 +200,8 @@ export class CommandSource {
         } else if (this.isInteraction()) {
             this.assertReplied();
             return (await this.interaction.fetchReply()).content;
+        } else if (this.isMock()) {
+            return this.mock.content;
         }
         this.throwUnsupported();
     }
@@ -195,6 +262,8 @@ export class CommandSource {
             await this.message.delete();
         } else if (this.isInteraction()) {
             await this.interaction.deleteReply();
+        } else if (this.isMock()) {
+            await this.mock.delete();
         }
     }
 
@@ -277,6 +346,8 @@ export class CommandSource {
             return new CommandSource(await this.message.reply(res));
         } else if (this.isInteraction()) {
             return await this.respondInteraction(res);
+        } else if (this.isMock()) {
+            return new CommandSource(await this.mock.reply(res));
         }
         this.throwUnsupported();
     }
@@ -291,6 +362,8 @@ export class CommandSource {
             return new CommandSource(await this.message.channel.send(res));
         } else if (this.isInteraction()) {
             return await this.respondInteraction(res);
+        } else if (this.isMock()) {
+            return new CommandSource(await this.mock.send(res));
         }
         this.throwUnsupported();
     }
@@ -301,7 +374,7 @@ export class CommandSource {
      * @returns New command source for next response.
      */
     public async edit(res: EditResponse): Promise<CommandSource> {
-        let edited: Message;
+        let edited: Receivable;
 
         if (this.isMessage()) {
             edited = await this.message.edit(res);
@@ -309,6 +382,8 @@ export class CommandSource {
             // Having a replied interaction here means the reply must be ephemeral
             this.assertReplied();
             edited = (await this.interaction.editReply(res)) as Message;
+        } else if (this.isMock()) {
+            edited = await this.mock.edit(res);
         } else {
             this.throwUnsupported();
         }
@@ -328,6 +403,8 @@ export class CommandSource {
             this.assertReplied();
             const content = (await this.interaction.fetchReply()).content;
             await this.interaction.editReply(content + res);
+        } else if (this.isMock()) {
+            return new CommandSource(await this.mock.append(res));
         }
         this.throwUnsupported();
     }
@@ -345,6 +422,8 @@ export class CommandSource {
             return new CommandSource(await this.message.author.send(res));
         } else if (this.isInteraction()) {
             return await this.respondInteraction(res);
+        } else if (this.isMock()) {
+            return new CommandSource(await this.mock.sendDirect(res));
         }
         this.throwUnsupported();
     }
