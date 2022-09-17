@@ -22,12 +22,20 @@ export type ReplyResponse = string | CommonReplyOptions;
 export type SendResponse = string | CommonSendOptions;
 export type EditResponse = string | CommonEditOptions;
 
+/**
+ * Parameters for creating a mock command source.
+ */
 export interface MockCommandSourceParams {
     member: GuildMember;
     channel: TextBasedChannel;
     guild: Guild;
 }
 
+/**
+ * Base class for a mock command source, which mocks the functionality of a real command source.
+ *
+ * Subclasses may override the defined methods for custom functionality.
+ */
 export class MockCommandSourceBase implements MockCommandSourceParams {
     constructor(public data: MockCommandSourceParams) {}
 
