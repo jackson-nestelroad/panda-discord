@@ -546,6 +546,18 @@ abstract class ParameterizedCommand<
         };
     }
 
+    protected runTransformer(argConfig: SingleArgumentConfig, result: ArgumentParserResult, slash: boolean): void {
+        if (argConfig.transformers) {
+            if (argConfig.transformers.any) {
+                (argConfig.transformers.any as SingleArgumentTransformer)(result.value, result);
+            } else if (slash && argConfig.transformers.slash) {
+                (argConfig.transformers.slash as SingleArgumentTransformer)(result.value, result);
+            } else if (!slash && argConfig.transformers.chat) {
+                (argConfig.transformers.chat as SingleArgumentTransformer)(result.value, result);
+            }
+        }
+    }
+
     // Shared parsing for slash commands.
     // Trivial since all arguments are parsed by Discord.
     public async runSlash(params: SlashCommandParameters<Bot>): Promise<void> {
@@ -554,33 +566,31 @@ abstract class ParameterizedCommand<
         // Just pick the right part of the option object depending on the type.
         const parsedOptions: Partial<Args> = {};
         for (const arg in this.args) {
-            const option = params.options.get(arg, false);
             const argConfig: SingleArgumentConfig = this.args[arg as keyof ArgumentsConfig<Args>];
             const typeConfig: ArgumentTypeMetadata<Bot> = ArgumentTypeConfig[argConfig.type];
 
-            if (!option) {
-                parsedOptions[arg as string] = argConfig.default;
+            const result: ArgumentParserResult = {};
+            const option = params.options.get(arg, false);
+            if (option === undefined || option === null) {
+                if (argConfig.default === undefined || argConfig.default === null) {
+                    continue;
+                }
+                result.value = argConfig.default;
             } else {
-                const result: ArgumentParserResult = {};
                 typeConfig.parsers.slash(option, result);
-                if (result.error && !this.suppressArgumentsError) {
-                    throw new Error(result.error);
-                }
-
-                if (argConfig.transformers) {
-                    if (argConfig.transformers.any) {
-                        (argConfig.transformers.any as SingleArgumentTransformer)(result.value, result);
-                    } else if (argConfig.transformers.slash) {
-                        (argConfig.transformers.slash as SingleArgumentTransformer)(result.value, result);
-                    }
-                }
-
-                if (result.error && !this.suppressArgumentsError) {
-                    throw new Error(result.error);
-                }
-
-                parsedOptions[option.name] = result.value;
             }
+
+            if (result.error && !this.suppressArgumentsError) {
+                throw new Error(result.error);
+            }
+
+            this.runTransformer(argConfig, result, true);
+
+            if (result.error && !this.suppressArgumentsError) {
+                throw new Error(result.error);
+            }
+
+            parsedOptions[option?.name ?? arg] = result.value;
         }
         return this.run(params, parsedOptions as Args);
     }
@@ -631,13 +641,8 @@ export abstract class ComplexCommand<
         }
 
         // Transform the argument as configured.
-        if (context.config.transformers) {
-            if (context.config.transformers.any) {
-                (context.config.transformers.any as SingleArgumentTransformer)(result.value, result);
-            } else if (context.config.transformers.chat) {
-                (context.config.transformers.chat as SingleArgumentTransformer)(result.value, result);
-            }
-        }
+        this.runTransformer(context.config, result, false);
+
         if (result.error && !context.config.hidden && !this.suppressArgumentsError) {
             throw new Error(result.error);
         }
@@ -726,7 +731,7 @@ export abstract class ComplexCommand<
         let cmdArgIndex = 0;
 
         // Loop through all split arguments, without named arguments.
-        for (; context.i < params.args.length && cmdArgIndex < cmdArgEntries.length; ++context.i) {
+        for (; context.i < params.args.length && cmdArgIndex < cmdArgEntries.length; ++context.i, ++cmdArgIndex) {
             let nextSplitArg = params.args.get(context.i);
 
             // The next split arg is assigned to the next command arg.
@@ -746,8 +751,6 @@ export abstract class ComplexCommand<
                     requiredArgNames.delete(context.name);
                 }
             }
-
-            ++cmdArgIndex;
         }
 
         // Assure that all required arguments were given and set default values as necessary.
@@ -767,8 +770,21 @@ export abstract class ComplexCommand<
                 // have appeared as named arguments. If not, assign their default value.
                 for (; cmdArgIndex < cmdArgEntries.length; ++cmdArgIndex) {
                     const [cmdArgName, cmdArgConfig] = cmdArgEntries[cmdArgIndex];
-                    if (!argsGivenByName.has(cmdArgName)) {
-                        parsed[cmdArgName] = cmdArgConfig.default;
+                    if (
+                        !argsGivenByName.has(cmdArgName) &&
+                        cmdArgConfig.default !== undefined &&
+                        cmdArgConfig.default !== null
+                    ) {
+                        const result: ArgumentParserResult = {};
+                        result.value = cmdArgConfig.default;
+
+                        // Transform the argument as configured.
+                        this.runTransformer(cmdArgConfig, result, false);
+
+                        if (result.error && !cmdArgConfig.hidden && !this.suppressArgumentsError) {
+                            throw new Error(result.error);
+                        }
+                        parsed[cmdArgName] = result.value;
                     }
                 }
             }
@@ -787,7 +803,17 @@ export abstract class ComplexCommand<
                         throw new Error(`Missing required argument \`${cmdArgName}\`.`);
                     }
                 }
-                parsed[cmdArgName] = cmdArgConfig.default;
+
+                const result: ArgumentParserResult = {};
+                result.value = cmdArgConfig.default;
+
+                // Transform the argument as configured.
+                this.runTransformer(cmdArgConfig, result, false);
+
+                if (result.error && !cmdArgConfig.hidden && !this.suppressArgumentsError) {
+                    throw new Error(result.error);
+                }
+                parsed[cmdArgName] = result.value;
             }
         }
 
