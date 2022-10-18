@@ -236,7 +236,7 @@ export class HelpCommand<Bot extends PandaDiscordBot = PandaDiscordBot> extends 
             if (cmd.examples && cmd.examples.length > 0) {
                 embed.addFields({
                     name: 'Examples',
-                    value: cmd.examples.map(example => `${prefix}${this.name} ${example}`).join('\n'),
+                    value: cmd.examples.map(example => `${prefix}${fullName} ${example}`).join('\n'),
                 });
             }
             return;
