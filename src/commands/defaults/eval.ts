@@ -1,21 +1,24 @@
 import * as DiscordJS from 'discord.js';
 
-import { ArgumentType, ArgumentsConfig } from '../arguments';
-import { ChatCommandParameters, CommandParameters } from '../params';
-import { ComplexCommand, LegacyCommand } from '../base';
-
-import { DefaultCommandCategory } from '../category';
-import { DefaultCommandPermission } from '../permission';
+import { PandaDiscordBot } from '../../bot';
 import { DiscordUtil } from '../../util/discord';
 import { EvalUtil } from '../../util/eval';
-import { PandaDiscordBot } from '../../bot';
+import { ArgumentType, ArgumentsConfig } from '../arguments';
+import { ComplexCommand, LegacyCommand } from '../base';
+import { DefaultCommandCategory } from '../category';
+import { ChatCommandParameters, CommandParameters } from '../params';
+import { DefaultCommandPermission } from '../permission';
 
 interface EvalArgs {
     code: string;
     silent: boolean;
 }
 
-// This command is heavily unsafe, use at your own risk
+/**
+ * Command that executes arbitrary JavaScript code from the user.
+ *
+ * This command is heavily unsafe, use at your own risk.
+ */
 export class EvalCommand extends ComplexCommand<PandaDiscordBot, EvalArgs> {
     public name = 'eval';
     public description = 'Executes arbitrary JavaScript and returns the result. Be careful!';
@@ -47,7 +50,7 @@ export class EvalCommand extends ComplexCommand<PandaDiscordBot, EvalArgs> {
             this.sensitivePattern = new RegExp(`${bot.client.token}`, 'g');
         }
 
-        // Parse code from code blocks/lines
+        // Parse code from code blocks/lines,
         const code = DiscordUtil.getCodeBlockOrLine(args.code)?.result?.content ?? args.code;
 
         let res = await EvalUtil.runCodeToString(code, {

@@ -1,12 +1,11 @@
 /**
  * Default command categories supported by the bot framework.
  *
- * You should use your own enum or set of strings for new
- * category schemes, but still use these values if using
- * default commands.
+ * You should use your own enum or set of strings for new category schemes, but still use these values if using default
+ * commands.
  *
- * Private command categories (ones that do not appear on the help
- * category page) must be prefixed with an underscore (`_`).
+ * Private command categories (ones that do not appear on the help category page) must be prefixed with an underscore
+ * (`_`).
  */
 export enum DefaultCommandCategory {
     Utility = 'Utility',
@@ -28,8 +27,7 @@ export namespace CommandCategoryUtil {
     }
 
     /**
-     * Returns the real name of a category by removing any underscore
-     * prefixes.
+     * Returns the real name of a category by removing any underscore prefixes.
      * @param category Category string.
      * @returns Category string with out prefixes.
      */

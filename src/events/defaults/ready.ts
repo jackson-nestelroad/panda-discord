@@ -1,5 +1,4 @@
 import { EnabledCommandType, PandaDiscordBot } from '../../bot';
-
 import { BaseEvent } from '../base';
 
 /**

@@ -1,3 +1,5 @@
+import { GuildMember, TextBasedChannel } from 'discord.js';
+
 import {
     ArgumentType,
     ArgumentsConfig,
@@ -7,7 +9,6 @@ import {
     StandardCooldowns,
 } from '../../src';
 import { CommandCategory, CommandPermission, ExampleBot } from '../example-bot';
-import { GuildMember, TextBasedChannel } from 'discord.js';
 
 interface PurgeArgs {
     user: GuildMember;

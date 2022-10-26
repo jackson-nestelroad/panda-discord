@@ -1,9 +1,9 @@
-import { CacheType, ChatInputCommandInteraction, CommandInteractionOptionResolver } from 'discord.js';
-
-import { CommandSource } from './command-source';
-import { PandaDiscordBot } from '../bot';
+import { ChatInputCommandInteraction } from 'discord.js';
 import { Snowflake } from 'discord.js';
+
+import { PandaDiscordBot } from '../bot';
 import { SplitArgumentArray } from '../util/argument-splitter';
+import { CommandSource } from './command-source';
 
 /**
  * Parameters given to all commands, whether running as a chat command or slash command.

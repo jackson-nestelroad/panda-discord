@@ -323,22 +323,20 @@ export class CommandSource {
                     const reply = await interaction.fetchReply();
                     return new CommandSource(reply as Message);
                 }
-            }
-            // Interaction was deferred, use editReply.
-            else {
+            } else {
+                // Interaction was deferred, use editReply.
                 const reply = (await interaction.editReply(res)) as Message;
 
                 // For consistency, set that the interaction has been replied to.
-                // If we don't do this, future responses on this interaction will also call editReply
-                // causing all messages to blend together.
+                // If we don't do this, future responses on this interaction will also call editReply causing all
+                // messages to blend together.
                 // This is very likely to not be intentional by the command, so it makes more sense to split things up.
                 interaction.replied = true;
 
                 return new CommandSource(ephemeral || this.deferredEphemeral ? interaction : reply);
             }
-        }
-        // Send a follow-up message.
-        else {
+        } else {
+            // Send a follow-up message.
             const reply = (await interaction.followUp(res)) as Message;
             return new CommandSource(ephemeral || this.deferredEphemeral ? interaction : reply);
         }

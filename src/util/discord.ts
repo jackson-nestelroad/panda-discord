@@ -96,10 +96,9 @@ export namespace DiscordUtil {
      */
     function deepEqual(a: object, b: object): boolean {
         if (a && b && typeof a === 'object' && typeof b === 'object') {
-            // Use the keys in the object with the most keys. We do this to account
-            // for keys that may be set to undefined in one object but not present in
-            // another. Both shoulde evaluate to undefined, but this logic makes sure
-            // no key is overlooked.
+            // Use the keys in the object with the most keys. We do this to account for keys that may be set to
+            // undefined in one object but not present in another. Both shoulde evaluate to undefined, but this logic
+            // makes sure no key is overlooked.
             const keysA = Object.keys(a);
             const keysB = Object.keys(b);
             const maxKeys = keysA.length > keysB.length ? keysA : keysB;
@@ -111,7 +110,17 @@ export namespace DiscordUtil {
             }
             return true;
         } else {
-            return a === b;
+            let equal = false;
+            // Allow undefined and [] to compare equal to each other.
+            if (a === undefined) {
+                equal ||= Array.isArray(b) && b.length === 0;
+            } else if (b === undefined) {
+                equal ||= Array.isArray(a) && a.length === 0;
+            }
+
+            equal ||= a === b;
+
+            return equal;
         }
     }
 
@@ -145,7 +154,7 @@ export namespace DiscordUtil {
                 a.name !== b.name ||
                 a.description !== b.description ||
                 !!a['required'] !== !!b['required'] ||
-                // Old command stores a string, new data can store an integer or string
+                // Old command stores a string, new data can store an integer or string.
                 // Just make sure to store a string so this comparison works!
                 a.type !== b.type ||
                 // Compare the choices and nested options themselves.

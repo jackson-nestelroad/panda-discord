@@ -1,4 +1,5 @@
-import { GuildMember, Collection, Snowflake } from 'discord.js';
+import { Collection, GuildMember, Snowflake } from 'discord.js';
+
 import { PandaDiscordBot } from '../bot';
 import { ExpireAge, TimedCache } from '../util/timed-cache';
 import { BaseService } from './base';

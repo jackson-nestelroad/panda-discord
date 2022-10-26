@@ -1,7 +1,7 @@
 import { Snowflake, User } from 'discord.js';
 
-import { BaseService } from './base';
 import { VariableTimedCacheSet } from '../util/timed-cache';
+import { BaseService } from './base';
 
 /**
  * Service for handling user timeouts.

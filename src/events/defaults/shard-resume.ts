@@ -1,5 +1,5 @@
-import { BaseEvent } from '../base';
 import { PandaDiscordBot } from '../../bot';
+import { BaseEvent } from '../base';
 
 /**
  * Default event handler for the resumeShard event.

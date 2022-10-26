@@ -8,11 +8,11 @@ import {
     Role,
     User,
 } from 'discord.js';
-import { ArgumentSplitter, SplitArgumentArray } from '../util/argument-splitter';
 
-import { ChatCommandParameters } from './params';
-import { Mentionable } from '../util/discord';
 import { PandaDiscordBot } from '../bot';
+import { ArgumentSplitter, SplitArgumentArray } from '../util/argument-splitter';
+import { Mentionable } from '../util/discord';
+import { ChatCommandParameters } from './params';
 
 /**
  * Argument types supported by the internal parser.
@@ -59,6 +59,8 @@ export enum ArgumentType {
     // Unsupported types:
     // SUB_COMMAND
     // SUB_COMMAND_GROUP
+    //
+    // If you would like to specify a subcommand, use the `NestedCommand` command class.
 }
 
 // Conditional type explicitly uses for mapping an argument type to its parsed value type.
@@ -352,11 +354,13 @@ type SingleTypedSingleArgumentConfig<A extends ArgumentType = ArgumentType, P = 
     channelTypes?: ArgumentTypeResultMap<A> extends GuildBasedChannel
         ? ApplicationCommandOptionAllowedChannelTypes[]
         : never;
-} & (ArgumentTypeResultMap<A> extends P // If not, then the user must define at least one transformer to make the conversion possible // If we can assign the type we parse to P, then transformers are optional
+} & (ArgumentTypeResultMap<A> extends P
     ? {
+          // If we can assign the type we parse to P, then transformers are optional.
           transformers?: SingleArgumentTransformersOptionalConfig<ArgumentTypeResultMap<A>, P>;
       }
     : {
+          // If not, then the user must define at least one transformer to make the conversion possible
           transformers: SingleArgumentTransformersRequiredConfig<ArgumentTypeResultMap<A>, P>;
       });
 

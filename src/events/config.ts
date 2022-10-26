@@ -1,6 +1,5 @@
-import { BaseEvent, ExtendableClientEvents } from './base';
-
 import { PandaDiscordBot } from '../bot';
+import { BaseEvent, ExtendableClientEvents } from './base';
 
 /**
  * Array of event types that can be instantiated.
@@ -21,7 +20,8 @@ export type EventMap<Bot extends PandaDiscordBot = PandaDiscordBot> = Map<
 export namespace EventConfig {
     /**
      * Builds an event array into an event map.
-     * @param commands Array of event types.
+     * @param events Array of event types.
+     * @param bot Bot.
      * @returns Map of event names to event instances.
      */
     export function build<Bot extends PandaDiscordBot = PandaDiscordBot>(

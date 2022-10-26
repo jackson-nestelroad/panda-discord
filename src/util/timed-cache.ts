@@ -108,9 +108,8 @@ export namespace ExpireAgeConversion {
 /**
  * A timed cache holds objects associatively by key for only a certain amount of time.
  *
- * Every stored entry holds a corresponding "expireAt" property that indicates when
- * the entry is no longer valid. Expired entries appear to not exist in the cache,
- * but they really still exist in the cache.
+ * Every stored entry holds a corresponding "expireAt" property that indicates when the entry is no longer valid.
+ * Expired entries appear to not exist in the cache, but they really still exist in the cache.
  */
 class BaseTimedCache<K, T> {
     protected readonly cache: Map<K, TimedCacheEntry<T>> = new Map();
@@ -156,8 +155,7 @@ class BaseTimedCache<K, T> {
 }
 
 /**
- * A timed cache that has a static expire age, which means every object
- * expires after the same amount of time.
+ * A timed cache that has a static expire age, which means every object expires after the same amount of time.
  */
 export class TimedCache<K, T> extends BaseTimedCache<K, T> {
     // Expire age of an entry in the cache in milliseconds.
@@ -223,9 +221,8 @@ export class TimedCacheSet<T> extends BaseTimedCache<T, T> {
 }
 
 /**
- * A timed cache that has a variable expire age, which means every object
- * is inserted with its expire age to indicate how long the entry should
- * exist in the cache.
+ * A timed cache that has a variable expire age, which means every object is inserted with its expire age to indicate
+ * how long the entry should exist in the cache.
  */
 export class VariableTimedCache<K, T> extends BaseTimedCache<K, T> {
     /**
@@ -257,8 +254,7 @@ export class VariableTimedCache<K, T> extends BaseTimedCache<K, T> {
 }
 
 /**
- * A timed cache with a variable expire age that does not store an associative
- * value for each key.
+ * A timed cache with a variable expire age that does not store an associative value for each key.
  */
 export class VariableTimedCacheSet<T> extends BaseTimedCache<T, T> {
     /**

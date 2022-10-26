@@ -1,5 +1,6 @@
-import { ArgumentType, ArgumentsConfig, CommandParameters, ComplexCommand, StandardCooldowns } from '../../src';
 import { ChannelType, GuildBasedChannel, PermissionFlagsBits } from 'discord.js';
+
+import { ArgumentType, ArgumentsConfig, CommandParameters, ComplexCommand, StandardCooldowns } from '../../src';
 import { CommandCategory, CommandPermission, ExampleBot } from '../example-bot';
 
 interface TopicArgs {

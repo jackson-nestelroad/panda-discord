@@ -13,8 +13,7 @@ enum GroupType {
  */
 export class SplitArgument {
     /**
-     * The actual parsed content for the argument, however it was
-     * grouped together by the original content.
+     * The actual parsed content for the argument, however it was grouped together by the original content.
      */
     public readonly content: string;
 
@@ -65,8 +64,7 @@ export class ArgumentSplitterError extends Error {
 
 /**
  * Provides an array-like interface to arguments split by `ArgumentSplitter`.
- * The primary feature of this class is the ability to restore the string the arguments
- * were parsed from using `restore(i)`.
+ * The primary feature of this class is the ability to restore the string the arguments were parsed from using `restore(i)`.
  */
 export class SplitArgumentArray {
     /**
@@ -127,8 +125,8 @@ export class SplitArgumentArray {
             return this;
         }
 
-        // Squish the internal string together so that the next group (if it exists)
-        // and the previous group touch each other.
+        // Squish the internal string together so that the next group (if it exists) and the previous group touch each
+        // other.
 
         // Surely a valid element, given we checked for 0 already.
         const endThisGroup = this._args[i]['endIndex'];
@@ -136,8 +134,8 @@ export class SplitArgumentArray {
 
         const squished = this.original.substring(0, endPrevGroup) + this.original.substring(endThisGroup);
 
-        // All args before the removed index are valid, but all args after the removed index
-        // are offset by the length of the removed chunk. Fix them before returning.
+        // All args before the removed index are valid, but all args after the removed index are offset by the length of
+        // the removed chunk. Fix them before returning.
         const removedChunkLength = endThisGroup - endPrevGroup;
         return new SplitArgumentArray(squished.trim(), [
             ...this._args.slice(0, i),
@@ -253,14 +251,12 @@ export class ArgumentSplitter {
     /**
      * Appends a potentially-escaped character to the next argument.
      *
-     * If the character is allowed to be escaped in the current group
-     * type, only the character is appended. If not, the backslash
-     * used to restore it is restored.
+     * If the character is allowed to be escaped in the current group type, only the character is appended. If not, the
+     * backslash used to restore it is restored.
      * @param char Next character.
      * @param i Current index.
-     * @param restoreBackslash Forcibly restore the backslash used to
-     * escape this character, if the character is escaped, regardless
-     * of group rules.
+     * @param restoreBackslash Forcibly restore the backslash used to escape this character, if the character is
+     * escaped, regardless of group rules.
      */
     private appendChar(char: string, i: number, restoreBackslash?: boolean): void {
         if (this.escaped) {
@@ -292,13 +288,11 @@ export class ArgumentSplitter {
         switch (char) {
             // Backslashes are used for escaping.
             case '\\':
-                // Append the empty character, which will restore one backslash
-                // if this character is cucrrently escaped.
+                // Append the empty character, which will restore one backslash if this character is cucrrently escaped.
                 // Thus, '\\' => '\' in the bot's eyes.
 
-                // This behavior can be unintuitive from a user's perspective
-                // only when commands depend on taking a certain number of
-                // backslashes in.
+                // This behavior can be unintuitive from a user's perspective only when commands depend on taking a
+                // certain number of backslashes in.
                 // It's safe to assume bots won't depend on such behavior.
                 const wasEscaped = this.escaped;
                 this.appendChar('', i, true);
@@ -351,17 +345,16 @@ export class ArgumentSplitter {
     }
 
     /**
-     * Handles any extra backticks that are present in `this.backticks.present` by
-     * forming any intermediate groups.
+     * Handles any extra backticks that are present in `this.backticks.present` by forming any intermediate groups.
      * @param i Current index.
      */
     private handleExtraBackticks(i: number): void {
         // There is an arbitrary maxmimum number of backticks that can make up a group.
-        // Anything after is either extra, or possibly the end of the group. In fact,
-        // multiple groups can be created and ended by one string of backticks.
+        // Anything after is either extra, or possibly the end of the group. In fact, multiple groups can be created and
+        // ended by one string of backticks.
         //
-        // For example: ```````` actually creates one complete group and starts another with
-        // the remaining two backticks.
+        // For example: ```````` actually creates one complete group and starts another with the remaining two
+        // backticks.
         const maxGroups = Math.floor(this.backticks.present / this.maxBackticksToFormAGroup);
         const leftOver = this.backticks.present % this.maxBackticksToFormAGroup;
 
@@ -370,8 +363,8 @@ export class ArgumentSplitter {
         const endsWithNewMaxGroup = maxGroups % 2 === 1;
 
         let lookbackIndex = i - this.backticks.present;
-        // This string of backticks ends with a new, unmatched group when the number of max-groups
-        // is odd, which means there is one max-group that is unmatched.
+        // This string of backticks ends with a new, unmatched group when the number of max-groups is odd, which means
+        // there is one max-group that is unmatched.
         //
         // When this is 0, this loop will never run and no extra arguments will be created.
         for (let j = 0; j < completeGroups; ++j, lookbackIndex += this.maxBackticksToFormAGroup * 2) {
@@ -400,8 +393,8 @@ export class ArgumentSplitter {
      * @param i Current index.
      */
     private consumeChar(char: string, i: number): void {
-        // We handle backticks with additional logic because they can be grouped in
-        // weird ways. Up to three backticks can be used at once to make a group.
+        // We handle backticks with additional logic because they can be grouped in weird ways. Up to three backticks
+        // can be used at once to make a group.
 
         if (this.group === GroupType.DoubleQuote) {
             // A quote group treats backticks as normal characters.
@@ -455,12 +448,11 @@ export class ArgumentSplitter {
     }
 
     /**
-     * Splits a string into an array of arguments that can be logically consumed
-     * and used for command parsing.
+     * Splits a string into an array of arguments that can be logically consumed and used for command parsing.
      *
-     * Arguments are separated by any number of whitespace by default. However, this
-     * splitter also supports grouping arguments using quotations or code blocks (one
-     * to three backticks). These characters can also be escaped using backslashes.
+     * Arguments are separated by any number of whitespace by default. However, this splitter also supports grouping
+     * arguments using quotations or code blocks (one to three backticks). These characters can also be escaped using
+     * backslashes.
      * @param content Message content.
      * @returns Array of arguments.
      */

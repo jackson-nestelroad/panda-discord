@@ -1,7 +1,7 @@
-import { GuildMember, PermissionFlagsBits, PermissionResolvable } from 'discord.js';
+import { PermissionResolvable } from 'discord.js';
 
-import { CommandParameters } from './params';
 import { PandaDiscordBot } from '../bot';
+import { CommandParameters } from './params';
 
 /**
  * Validates if a command should be run or not.

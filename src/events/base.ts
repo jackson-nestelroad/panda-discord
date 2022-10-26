@@ -1,4 +1,5 @@
 import { ClientEvents } from 'discord.js';
+
 import { PandaDiscordBot } from '../bot';
 
 export interface ExtendableClientEvents extends ClientEvents {

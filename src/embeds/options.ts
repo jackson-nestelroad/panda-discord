@@ -1,4 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
+
 import { PandaDiscordBot } from '../bot';
 
 /**

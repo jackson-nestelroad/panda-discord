@@ -1,5 +1,8 @@
 import { SplitArgumentArray } from './argument-splitter';
 
+/**
+ * Pattern for parsing named arguments.
+ */
 export interface NamedArgumentPattern {
     prefix: string;
     separator: string;
@@ -7,16 +10,23 @@ export interface NamedArgumentPattern {
     stopOnPrefixOnly?: boolean;
 }
 
-export interface NamedArgument {
-    name: string;
-    value: string;
-}
+/**
+ * Type for a collection of named arguments.
+ */
+export type NamedArguments = Map<string, string>;
 
+/**
+ * Extracted arguments from the argument parser.
+ */
 export interface ExtractedArgs {
-    named: NamedArgument[];
+    named: NamedArguments;
     unnamed: SplitArgumentArray;
 }
 
+/**
+ * Utility function for validating a named arguments pattern.
+ * @param pattern
+ */
 export function validateNamedArgsPattern(pattern: NamedArgumentPattern): void {
     if (/\s/g.test(pattern.prefix) || /\s/g.test(pattern.separator)) {
         throw new Error(`Named argument pattern cannot contain whitespace.`);
@@ -30,7 +40,7 @@ export function validateNamedArgsPattern(pattern: NamedArgumentPattern): void {
  * @returns An array of named arguments and the leftover unnamed arguments.
  */
 export function extractNamedArgs(args: SplitArgumentArray, pattern: NamedArgumentPattern): ExtractedArgs {
-    const named: NamedArgument[] = [];
+    const named: NamedArguments = new Map();
     for (let i = 0; i < args.length; ++i) {
         const arg = args.args[i];
         // Named arguments must not start in a group.
@@ -67,7 +77,7 @@ export function extractNamedArgs(args: SplitArgumentArray, pattern: NamedArgumen
             }
 
             // Record the named argument.
-            named.push({ name, value });
+            named.set(name, value);
             // Remove the argument.
             args = args.remove(i--);
         }

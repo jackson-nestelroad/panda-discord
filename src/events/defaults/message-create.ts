@@ -1,10 +1,10 @@
-import { EnabledCommandType, PandaDiscordBot } from '../../bot';
 import { Message, Snowflake } from 'discord.js';
 
-import { BaseEvent } from '../base';
-import { ChatCommandParameters } from '../../commands/params';
+import { EnabledCommandType, PandaDiscordBot } from '../../bot';
 import { CommandSource } from '../../commands/command-source';
+import { ChatCommandParameters } from '../../commands/params';
 import { SplitArgumentArray } from '../../util/argument-splitter';
+import { BaseEvent } from '../base';
 
 /**
  * Default event handler for messages.

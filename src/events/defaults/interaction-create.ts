@@ -1,9 +1,9 @@
-import { EnabledCommandType, PandaDiscordBot } from '../../bot';
-
-import { BaseEvent } from '../base';
-import { CommandSource } from '../../commands/command-source';
 import { Interaction } from 'discord.js';
+
+import { EnabledCommandType, PandaDiscordBot } from '../../bot';
+import { CommandSource } from '../../commands/command-source';
 import { SlashCommandParameters } from '../../commands/params';
+import { BaseEvent } from '../base';
 
 /**
  * Default event handler for interactions.
