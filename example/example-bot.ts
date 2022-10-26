@@ -1,4 +1,7 @@
+import { PermissionFlagsBits, Snowflake } from 'discord.js';
+
 import {
+    BaseHelpServiceInternal,
     CommandPermissionOptions,
     DefaultCommandCategory,
     DefaultCommandPermission,
@@ -6,7 +9,7 @@ import {
     PandaDiscordBot,
     TimeoutService,
 } from '../src/index';
-import { PermissionFlagsBits, Snowflake } from 'discord.js';
+import { HelpService } from './services/help';
 
 export const CommandPermission = {
     ...DefaultCommandPermission,
@@ -31,6 +34,7 @@ export class ExampleBot extends PandaDiscordBot {
     public commandCategories = Object.values(CommandCategory);
     public commandPermissions = Object.values(CommandPermission);
 
+    public helpService: HelpService = new HelpService(this, new BaseHelpServiceInternal(this));
     public memberListService: MemberListService = new MemberListService(this);
     public timeoutService: TimeoutService = new TimeoutService(this);
 

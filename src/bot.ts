@@ -14,32 +14,33 @@ import {
     Snowflake,
     User,
 } from 'discord.js';
-import { ArgumentSplitter, SplitArgumentArray } from './util/argument-splitter';
+
 import { ArgumentType, SingleArgumentConfig } from './commands/arguments';
+import { BaseCommand } from './commands/base';
+import { CommandSource } from './commands/command-source';
 import { CommandConfig, CommandMap, CommandTypeArray } from './commands/config';
-import { DiscordUtil, Mentionable } from './util/discord';
+import { HelpCommand } from './commands/defaults/help';
+import { PingCommand } from './commands/defaults/ping';
+import { CommandParameters } from './commands/params';
+import { CommandPermissionOptions } from './commands/permission';
 import { EmbedOptions, EmbedProps, EmbedTemplates } from './embeds/options';
+import { BaseEvent } from './events/base';
 import { EventConfig, EventMap, EventTypeArray } from './events/config';
-import { ExpireAgeConversion, TimedCache } from './util/timed-cache';
+import { DefaultInteractionCreateEvent } from './events/defaults/interaction-create';
+import { DefaultMessageCreateEvent } from './events/defaults/message-create';
+import { DefaultReadyEvent } from './events/defaults/ready';
+import { BaseHelpService } from './services/help';
+import { MemberListService } from './services/member-list';
+import { TimeoutService } from './services/timeout';
+import { ArgumentSplitter, SplitArgumentArray } from './util/argument-splitter';
+import { DiscordUtil, Mentionable } from './util/discord';
 import {
     ExtractedArgs,
     NamedArgumentPattern,
     extractNamedArgs,
     validateNamedArgsPattern,
 } from './util/named-arguments';
-
-import { BaseCommand } from './commands/base';
-import { BaseEvent } from './events/base';
-import { CommandParameters } from './commands/params';
-import { CommandPermissionOptions } from './commands/permission';
-import { CommandSource } from './commands/command-source';
-import { DefaultInteractionCreateEvent } from './events/defaults/interaction-create';
-import { DefaultMessageCreateEvent } from './events/defaults/message-create';
-import { DefaultReadyEvent } from './events/defaults/ready';
-import { HelpCommand } from './commands/defaults/help';
-import { MemberListService } from './services/member-list';
-import { PingCommand } from './commands/defaults/ping';
-import { TimeoutService } from './services/timeout';
+import { ExpireAgeConversion, TimedCache } from './util/timed-cache';
 
 /**
  * Option for using named arguments on the bot.
@@ -80,8 +81,7 @@ export interface PandaOptions {
     /**
      * Options that are passed to the Discord.JS client.
      *
-     * If anything, the WebSocket intents are required for setting up which events
-     * the bot should receive.
+     * If anything, the WebSocket intents are required for setting up which events the bot should receive.
      */
     client: ClientOptions;
 
@@ -93,28 +93,24 @@ export interface PandaOptions {
     /**
      * Array of event classes that are used to handle Discord events.
      *
-     * Do not put an "interactionCreate" handler in this array. Instead, use the
-     * `interactionEvent` option, because the interaction event is typically set
-     * up after slash commands are created, which occurs after the ready event
-     * fires.
+     * Do not put an "interactionCreate" handler in this array. Instead, use the `interactionEvent` option, because the
+     * interaction event is typically set up after slash commands are created, which occurs after the ready event fires.
      */
     events?: EventTypeArray;
 
     /**
-     * The class that is set up to handle "interactionCreate" events, which is
-     * typically used for slash commands.
+     * The class that is set up to handle "interactionCreate" events, which is typically used for slash commands.
      *
-     * Must be specified separately so that the event can only be attached after
-     * all of the necessary slash commands are created.
+     * Must be specified separately so that the event can only be attached after all of the necessary slash commands are
+     * created.
      */
     interactionEvent?: new (bot: PandaDiscordBot) => BaseEvent<'interactionCreate'>;
 
     /**
      * Number of cooldown offenses a user has to make before going on timeout.
      *
-     * A cooldown offense occurs when a user attempts to use a command in its
-     * cooldown period. The user is timed out, which means the bot ignores all
-     * messages and interactions from them.
+     * A cooldown offense occurs when a user attempts to use a command in its cooldown period. The user is timed out,
+     * which means the bot ignores all messages and interactions from them.
      */
     cooldownOffensesForTimeout?: number;
 
@@ -132,6 +128,14 @@ export interface PandaOptions {
      * The type of commands the bot should serve.
      */
     commandType?: EnabledCommandType;
+
+    /**
+     * Specifies if the bot should run the help command when the given named argument is given.
+     *
+     * Note that this option only works for commands that parse named arguments. Parent commands and commands that do
+     * not have named arguments when the `NamedArgsOption.IfNeeded` option is selected will not have this option.
+     */
+    runHelpNamedArg?: string;
 }
 
 type CompletePandaOptions = { [option in keyof PandaOptions]-?: PandaOptions[option] };
@@ -147,6 +151,7 @@ const defaultOptions: CompletePandaOptions = {
     owner: null,
     namedArgs: NamedArgsOption.Always,
     commandType: EnabledCommandType.Slash,
+    runHelpNamedArg: 'help',
 };
 
 /**
@@ -171,8 +176,7 @@ export abstract class PandaDiscordBot {
     /**
      * Pattern for detecting and parsing named arguments.
      *
-     * For example, `namedArgsPattern = { prefix: '--', separator: '=' };`
-     * allows the following:
+     * For example, `namedArgsPattern = { prefix: '--', separator: '=' };` allows the following:
      *
      *      `>purge @user 50 #general`
      *
@@ -214,6 +218,13 @@ export abstract class PandaDiscordBot {
     public events: EventMap;
 
     /**
+     * Service that provides help about the bot and its commands.
+     *
+     * Define this property on your bot class to use it for internal methods.
+     */
+    public helpService?: BaseHelpService;
+
+    /**
      * Service that fetches and caches entire member lists for guilds.
      *
      * Define this property on your bot class to use it for internal methods.
@@ -234,8 +245,6 @@ export abstract class PandaDiscordBot {
     public constructor(options: Partial<PandaOptions> = {}) {
         this.mergeOptionsIn(options);
         this.client = new Client(this.options.client);
-        this.refreshCommands();
-        this.refreshEvents();
     }
 
     private mergeOptionsIn(options: Partial<PandaOptions>) {
@@ -248,6 +257,12 @@ export abstract class PandaDiscordBot {
         if (this.namedArgsPattern) {
             validateNamedArgsPattern(this.namedArgsPattern);
         }
+    }
+
+    private async internalInitialize(): Promise<void> {
+        this.refreshCommands();
+        this.refreshEvents();
+        await this.refreshServices();
     }
 
     /**
@@ -290,6 +305,15 @@ export abstract class PandaDiscordBot {
         this.events = EventConfig.build(this.options.events, this);
     }
 
+    /** Refresh the services owned by the bot framework.
+     *
+     * This does not automatically refresh services added by overriding classes.
+     * Override this method as needed.
+     */
+    protected async refreshServices(): Promise<void> {
+        await this.helpService?.refresh();
+    }
+
     /**
      * Get the proper command manager this command would belong to.
      * @param cmd Command to search for.
@@ -316,8 +340,8 @@ export abstract class PandaDiscordBot {
         // Store all global commands in the cache.
         await this.client.application.commands.fetch();
 
-        // Look through all of the commands that currently exist as slash commands
-        // and delete ones that have been removed from the bot.
+        // Look through all of the commands that currently exist as slash commands and delete ones that have been
+        // removed from the bot.
         for (const [_, commandData] of this.client.application.commands.cache) {
             // This command has been removed altogether, or it has been moved to a guild.
             const cmd = this.commands.get(commandData.name);
@@ -326,11 +350,10 @@ export abstract class PandaDiscordBot {
             }
         }
 
-        // We do not currently support deleting commands that previously existed
-        // on a guild (using `slashGuildId`) but have been moved to global.
-        // If you run into this situation, it is best to first run the bot with
-        // the command completely removed, then run it with the command added with
-        // the `slashGuildId` property enabled.
+        // We do not currently support deleting commands that previously existed on a guild (using `slashGuildId`) but
+        // have been moved to global.
+        // If you run into this situation, it is best to first run the bot with the command completely removed, then run
+        // it with the command added with the `slashGuildId` property enabled.
 
         // Go through every internal command and possibly update its slash command.
         for (const [name, cmd] of this.commands) {
@@ -363,8 +386,7 @@ export abstract class PandaDiscordBot {
     }
 
     /**
-     * Creates and updates slash commands stored in the command map, then
-     * enabled the bot to receive slash commands.
+     * Creates and updates slash commands stored in the command map, then enabled the bot to receive slash commands.
      */
     public async createAndEnableSlashCommands() {
         if (!this.slashCommandsEnabled) {
@@ -424,13 +446,12 @@ export abstract class PandaDiscordBot {
     }
 
     /**
-     * Runs the given function, funneling any thrown errors to the given interaction
-     * in the same way as `sendError`.
+     * Runs the given function, funneling any thrown errors to the given interaction in the same way as `sendError`.
      *
      * If no error occurs, the interaction is not replied to.
      *
-     * Useful for commands that move from a command source to another interaction
-     * type, such as a modal submit, for responding to the user.
+     * Useful for commands that move from a command source to another interaction type, such as a modal submit, for
+     * responding to the user.
      * @param interaction Next interaction to repy to.
      * @param method Function to run that may throw errors.
      * @returns `true` if no errors thrown, `false` if errors were thrown.
@@ -459,8 +480,8 @@ export abstract class PandaDiscordBot {
     /**
      * Splits a string into arguments to be consumed by a command.
      *
-     * By default, strings are split by spaces. However, quotes or
-     * backticks can be used to keep multiple words together.
+     * By default, strings are split by spaces. However, quotes or backticks can be used to keep multiple words
+     * together.
      * Quotes and backticks can also be escaped using backslashes (`\`).
      * @param str String to split.
      * @returns Array of arguments.
@@ -473,8 +494,7 @@ export abstract class PandaDiscordBot {
     /**
      * Extracts named arguments to be processed separately.
      * @param args Split arguments array.
-     * @param pattern Pattern to detect named arguments by. Defaults to
-     * the pattern set on the bot.
+     * @param pattern Pattern to detect named arguments by. Defaults to the pattern set on the bot.
      * @returns An array of named arguments and the leftover unnamed arguments.
      */
     public extractNamedArgs(
@@ -566,8 +586,8 @@ export abstract class PandaDiscordBot {
 
     /**
      * Parses a GuildMember instance from the input string.
-     * First checks if the string is a mention, then checks if the string is a user ID, then
-     * checks if the string is a username.
+     * First checks if the string is a mention, then checks if the string is a user ID, then checks if the string is a
+     * username.
      *
      * Uses MemberListService if enabled on the bot. If not, uses guild cache.
      * @param str Input string.
@@ -600,8 +620,8 @@ export abstract class PandaDiscordBot {
 
     /**
      * Parses a guild channel instance from the input string.
-     * First checks if the string is a mention, then checks if the string is a channel ID, then
-     * checks if the string is a channel name.
+     * First checks if the string is a mention, then checks if the string is a channel ID, then checks if the string is
+     * a channel name.
      * @param str Input string.
      * @param guildId Guild ID context.
      * @returns GuildBasedChannel instance if found, null if not found.
@@ -627,8 +647,8 @@ export abstract class PandaDiscordBot {
 
     /**
      * Parses a TextBasedChannel instance from the input string.
-     * First checks if the string is a mention, then checks if the string is a role ID, then
-     * checks if the string is a role name.
+     * First checks if the string is a mention, then checks if the string is a role ID, then checks if the string is a
+     * role name.
      * @param str Input string.
      * @param guildId Guild ID context.
      * @returns Role instance if found, null if not found.
@@ -649,6 +669,24 @@ export abstract class PandaDiscordBot {
             guild.roles.cache.find(role => role.name.localeCompare(str, undefined, { sensitivity: 'accent' }) === 0) ||
             null
         );
+    }
+
+    /**
+     * Returns the command instance, if it exists, by the full name.
+     *
+     * A command's full name is a path from the top-level command to the lowest subcommand, with each name separated by
+     * a single space.
+     * @param fullName Full command name, each name separated by a space.
+     * @returns Command instance.
+     */
+    public getCommandFromFullName(fullName: string): BaseCommand {
+        const names = fullName.split(' ');
+        let cmd = this.commands.get(names[0]);
+        let i = 1;
+        while (cmd && cmd.isNested && i < names.length) {
+            cmd = cmd.subcommandMap.get(names[i++]);
+        }
+        return cmd;
     }
 
     /**
@@ -774,6 +812,7 @@ export abstract class PandaDiscordBot {
             if (this.initialize) {
                 await this.initialize();
             }
+            await this.internalInitialize();
             await this.client.login(token);
             this.running = true;
         } catch (error) {
