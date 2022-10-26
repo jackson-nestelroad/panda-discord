@@ -132,8 +132,7 @@ export interface PandaOptions {
     /**
      * Specifies if the bot should run the help command when the given named argument is given.
      *
-     * Note that this option only works for commands that parse named arguments. Parent commands and commands that do
-     * not have named arguments when the `NamedArgsOption.IfNeeded` option is selected will not have this option.
+     * Note that this option only works for commands that parse named arguments.
      */
     runHelpNamedArg?: string;
 }
