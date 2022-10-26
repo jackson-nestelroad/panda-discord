@@ -1,15 +1,15 @@
-import { EnabledCommandType, EvalCommand, HelpCommand, NamedArgsOption, PingCommand } from '../src';
-
-import { EightBallCommand } from './commands/8ball';
-import { ExampleBot } from './example-bot';
-import { FoodCommand } from './commands/food';
 import { GatewayIntentBits } from 'discord.js';
+import { config } from 'dotenv';
+
+import { EnabledCommandType, EvalCommand, HelpCommand, NamedArgsOption, PingCommand } from '../src';
+import { EightBallCommand } from './commands/8ball';
+import { FoodCommand } from './commands/food';
 import { PurgeCommand } from './commands/purge';
 import { RenameFileCommand } from './commands/rename-file';
 import { RpsCommand } from './commands/rps';
 import { ShowArgsCommand } from './commands/show-args';
 import { TopicCommand } from './commands/topic';
-import { config } from 'dotenv';
+import { ExampleBot } from './example-bot';
 
 config();
 
@@ -37,7 +37,7 @@ config();
                 GatewayIntentBits.DirectMessages,
             ],
         },
-        namedArgs: NamedArgsOption.IfNeeded,
+        namedArgs: NamedArgsOption.Always,
         commandType: EnabledCommandType.Chat | EnabledCommandType.Slash,
     });
     await bot.run(process.env.TOKEN);
