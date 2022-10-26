@@ -81,11 +81,12 @@ export namespace ExpireAgeConversion {
     /**
      * Converts an ExpireAge to string.
      * @param time Expire age.
+     * @param includeMs Include milliseconds?
      * @returns Time string (x hours, y minutes, z seconds, w milliseconds).
      */
-    export function toString(time: ExpireAge): string {
+    export function toString(time: ExpireAge, includeMs: boolean = true): string {
         if (typeof time === 'number') {
-            return toString(toExpireAgeFormat(time));
+            return toString(toExpireAgeFormat(time), includeMs);
         } else {
             const values: string[] = [];
             if (time.hours) {
@@ -97,7 +98,7 @@ export namespace ExpireAgeConversion {
             if (time.seconds) {
                 values.push(`${time.seconds} second${time.seconds !== 1 ? 's' : ''}`);
             }
-            if (time.milliseconds) {
+            if (includeMs && time.milliseconds) {
                 values.push(`${time.milliseconds} millisecond${time.milliseconds !== 1 ? 's' : ''}`);
             }
             return values.join(', ');
@@ -133,7 +134,7 @@ class BaseTimedCache<K, T> {
     /**
      * Get the object stored for the given key if it is not expired.
      * @param key Key to check.
-     * @returns Value stored at key, undefined if does not exist or expired.
+     * @returns Value stored at key, undefined if it does not exist or expired.
      */
     public get(key: K): T | undefined {
         if (this.cache.has(key)) {
@@ -142,6 +143,22 @@ class BaseTimedCache<K, T> {
                 return undefined;
             }
             return entry.data;
+        }
+        return undefined;
+    }
+
+    /**
+     * Get the cache entry stored for the given key if it is not expired.
+     * @param key Key to check.
+     * @returns Entry stored at key, undefined if it does not exist or expired.
+     */
+    public getEntry(key: K): TimedCacheEntry<T> | undefined {
+        if (this.cache.has(key)) {
+            const entry = this.cache.get(key);
+            if (new Date().valueOf() >= entry.expireAt) {
+                return undefined;
+            }
+            return entry;
         }
         return undefined;
     }

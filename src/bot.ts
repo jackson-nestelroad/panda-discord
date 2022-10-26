@@ -750,10 +750,11 @@ export abstract class PandaDiscordBot {
         if (cooldownSet) {
             const author = src.author;
             const id = author.id;
-            const offenses = cooldownSet.get(id);
-            if (offenses === undefined) {
+            const entry = cooldownSet.getEntry(id);
+            if (entry === undefined) {
                 cooldownSet.set(id, 0);
             } else {
+                const { expireAt, data: offenses } = entry;
                 if (this.timeoutService && offenses >= this.options.cooldownOffensesForTimeout) {
                     await this.timeoutService.timeout(author);
                 } else {
@@ -771,7 +772,13 @@ export abstract class PandaDiscordBot {
                                   )}.`
                                 : 'Slow down!';
 
-                        const reply = await src.reply({ content: slowDownMessage, ephemeral: true });
+                        const reply = await src.reply({
+                            content: `Slow down! You are on cooldown for another ${ExpireAgeConversion.toString(
+                                expireAt - Date.now(),
+                                false,
+                            )}.`,
+                            ephemeral: true,
+                        });
                         if (reply.isMessage()) {
                             await this.wait(10000);
                             await reply.delete();
