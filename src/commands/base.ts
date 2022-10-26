@@ -8,6 +8,11 @@ import {
     PermissionResolvable,
     Snowflake,
 } from 'discord.js';
+
+import { NamedArgsOption } from '..';
+import { PandaDiscordBot } from '../bot';
+import { SplitArgumentArray } from '../util/argument-splitter';
+import { ExpireAge, ExpireAgeFormat, TimedCache } from '../util/timed-cache';
 import {
     ArgumentParserResult,
     ArgumentType,
@@ -18,15 +23,10 @@ import {
     SingleArgumentConfig,
     SingleArgumentTransformer,
 } from './arguments';
-import { ChatCommandParameters, CommandParameters, SlashCommandArgumentLevel, SlashCommandParameters } from './params';
 import { CommandCategoryUtil, DefaultCommandCategory } from './category';
 import { CommandMap, CommandTypeArray } from './config';
-import { ExpireAge, ExpireAgeFormat, TimedCache } from '../util/timed-cache';
-
+import { ChatCommandParameters, CommandParameters, SlashCommandArgumentLevel, SlashCommandParameters } from './params';
 import { CommandPermissionOptions } from './permission';
-import { NamedArgsOption } from '..';
-import { PandaDiscordBot } from '../bot';
-import { SplitArgumentArray } from '../util/argument-splitter';
 
 type ReadonlyDictionary<T> = { readonly [key: string]: T };
 
@@ -208,8 +208,7 @@ export interface BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot, Shar
     readonly slashGuildId?: Snowflake;
 
     /**
-     * A flag that signals to the outside world if this command should
-     * be treated as a nested command.
+     * A flag that signals to the outside world if this command should be treated as a nested command.
      * Do not set this manually in implementation classes.
      */
     readonly isNested?: boolean;
@@ -220,12 +219,10 @@ export interface BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot, Shar
     readonly subcommandMap?: CommandMap<string, Bot, Shared>;
 
     /**
-     * A flag signalling that the command listed on the help page should
-     * be flattened down at this level. In other words, all subcommands will
-     * not appear as sepearate entries in the list of commands per category.
+     * A flag signalling that the command listed on the help page should be flattened down at this level. In other
+     * words, all subcommands will not appear as sepearate entries in the list of commands per category.
      *
-     * Subcommands can be still searched for on their own in the help
-     * command.
+     * Subcommands can be still searched for on their own in the help command.
      */
     readonly flattenHelpForSubCommands?: boolean;
 
@@ -248,8 +245,7 @@ export abstract class BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot,
     public abstract readonly name: string;
 
     /**
-     * Description of the command that appears on the slash command screen
-     * and the help page.
+     * Description of the command that appears on the slash command screen and the help page.
      */
     public abstract readonly description: string;
 
@@ -289,8 +285,7 @@ export abstract class BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot,
     protected readonly nestedDepth: number = 0;
 
     /**
-     * Maps user IDs to the number of times they have tried to use this command
-     * before their cooldown has finished.
+     * Maps user IDs to the number of times they have tried to use this command before their cooldown has finished.
      */
     private cooldownSet: TimedCache<Snowflake, number> = null;
 
@@ -300,6 +295,18 @@ export abstract class BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot,
     public get isSlashCommand(): boolean {
         // Command must be public.
         return !this.disableSlash && CommandCategoryUtil.isPublic(this.category);
+    }
+
+    /**
+     * Generates the full name (includes all subcommands) to display on the help page.
+     * @returns Full name.
+     */
+    public fullName(): string {
+        let name = this.name;
+        for (let cmd = this.parentCommand; cmd; cmd = cmd.parentCommand) {
+            name = `${cmd.name} ${name}`;
+        }
+        return name;
     }
 
     /**
@@ -340,6 +347,27 @@ export abstract class BaseCommand<Bot extends PandaDiscordBot = PandaDiscordBot,
 
     protected throwConfigurationError(msg: string) {
         throw new Error(`Configuration error for command "${this.name}": ${msg}`);
+    }
+
+    /**
+     * Returns whether or not the command should parse out named arguments prior to running.
+     * @param params Command parameters.
+     * @returns Parse named arguments?
+     */
+    protected shouldParseNamedArgs(params: CommandParameters<Bot>): boolean {
+        let parseNamedArgs = !this.disableNamedArgs;
+        switch (params.bot.options.namedArgs) {
+            case NamedArgsOption.Always:
+                parseNamedArgs &&= true;
+                break;
+            case NamedArgsOption.Never:
+                parseNamedArgs &&= false;
+                break;
+            case NamedArgsOption.IfNeeded:
+                parseNamedArgs &&= this['usesNamedArgs'];
+                break;
+        }
+        return parseNamedArgs;
     }
 
     /**
@@ -421,9 +449,22 @@ export abstract class SimpleCommand<Bot extends PandaDiscordBot, Shared = never>
             dmPermission: this.slashGuildId ? null : !!this.enableInDM,
         };
     }
-
-    // Avoid any parsing of the message content, because it doesn't matter.
     public async runChat(params: ChatCommandParameters<Bot>) {
+        // Avoid any parsing of the message content, because it doesn't matter.
+        // ... except in the case where the user is asking for help.
+        if (this.shouldParseNamedArgs(params)) {
+            const { named } = params.bot.extractNamedArgs(params.args);
+            if (
+                params.bot.options.runHelpNamedArg &&
+                named.has(params.bot.options.runHelpNamedArg) &&
+                params.bot.helpService
+            ) {
+                // User is asking for help on how to use this command.
+                const helpEmbed = await params.bot.helpService.help(params, { query: this.fullName() });
+                await params.src.send({ embeds: [helpEmbed] });
+                return;
+            }
+        }
         return this.run(params);
     }
 
@@ -478,8 +519,8 @@ abstract class ParameterizedCommand<
         //  1. Required arguments.
         //  2. Optional arguments.
         //  3. Rest-of-content argument.
-        // Named and hidden arguments can be scattered throughout in any way, as long
-        // as they are not marked as required.
+        // Named and hidden arguments can be scattered throughout in any way, as long as they are not marked as
+        // required.
 
         const state = {
             required: true,
@@ -672,18 +713,7 @@ export abstract class ComplexCommand<
 
         const cmdArgEntries: [string, SingleArgumentConfig][] = Object.entries(this.args);
 
-        let parseNamedArgs = !this.disableNamedArgs;
-        switch (params.bot.options.namedArgs) {
-            case NamedArgsOption.Always:
-                parseNamedArgs &&= true;
-                break;
-            case NamedArgsOption.Never:
-                parseNamedArgs &&= false;
-                break;
-            case NamedArgsOption.IfNeeded:
-                parseNamedArgs &&= this['usesNamedArgs'];
-                break;
-        }
+        const parseNamedArgs = this.shouldParseNamedArgs(params);
 
         // These sets are not needed if we are not parsing named arguments.
         const requiredArgNames: Set<string> = parseNamedArgs
@@ -695,7 +725,18 @@ export abstract class ComplexCommand<
         if (parseNamedArgs) {
             const { named, unnamed } = params.bot.extractNamedArgs(params.args);
 
-            for (let { name, value } of named) {
+            if (
+                params.bot.options.runHelpNamedArg &&
+                named.has(params.bot.options.runHelpNamedArg) &&
+                params.bot.helpService
+            ) {
+                // User is asking for help on how to use this command.
+                const helpEmbed = await params.bot.helpService.help(params, { query: this.fullName() });
+                await params.src.send({ embeds: [helpEmbed] });
+                return;
+            }
+
+            for (let [name, value] of named.entries()) {
                 name = name.toLocaleLowerCase();
                 const config = this.args[name];
                 if (!config) {
@@ -719,8 +760,7 @@ export abstract class ComplexCommand<
                 }
             }
 
-            // After all processing is done, overwrite the old args array with the new one that
-            // has no named arguments.
+            // After all processing is done, overwrite the old args array with the new one that has no named arguments.
             // Clearly unnamed arguments override any named ones.
             context.i = 0;
             context.isNamed = false;
@@ -766,8 +806,8 @@ export abstract class ComplexCommand<
                     );
                 }
             } else {
-                // There are more arguments that did not appear as unnamed arguments, but they may
-                // have appeared as named arguments. If not, assign their default value.
+                // There are more arguments that did not appear as unnamed arguments, but they may have appeared as
+                // named arguments. If not, assign their default value.
                 for (; cmdArgIndex < cmdArgEntries.length; ++cmdArgIndex) {
                     const [cmdArgName, cmdArgConfig] = cmdArgEntries[cmdArgIndex];
                     if (
@@ -789,8 +829,7 @@ export abstract class ComplexCommand<
                 }
             }
         } else {
-            // There are more arguments that surely did not appear, because the bot does not
-            // support named arguments.
+            // There are more arguments that surely did not appear, because the bot does not support named arguments.
             // This loop assures all arguments left are not required and get their default value.
             for (; cmdArgIndex < cmdArgEntries.length; ++cmdArgIndex) {
                 const [cmdArgName, cmdArgConfig] = cmdArgEntries[cmdArgIndex];
@@ -875,8 +914,7 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
     public initialize() {
         super.initialize();
 
-        // If depth is currently 2, then the next level of commands will be depth 3,
-        // which is not supported by Discord.
+        // If depth is currently 2, then the next level of commands will be depth 3, which is not supported by Discord.
         if (this.nestedDepth >= 2) {
             this.throwConfigurationError(`Nested commands only support two levels of nesting.`);
         }
@@ -944,6 +982,21 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = void> 
 
     // Delegates a chat command to a subcommand.
     public async runChat(params: ChatCommandParameters<Bot>) {
+        // Check for help named argument first, in case it was specified.
+        if (this.shouldParseNamedArgs(params)) {
+            const { named } = params.bot.extractNamedArgs(params.args);
+            if (
+                params.bot.options.runHelpNamedArg &&
+                named.has(params.bot.options.runHelpNamedArg) &&
+                params.bot.helpService
+            ) {
+                // User is asking for help on how to use this command.
+                const helpEmbed = await params.bot.helpService.help(params, { query: this.fullName() });
+                await params.src.send({ embeds: [helpEmbed] });
+                return;
+            }
+        }
+
         if (params.args.length === 0) {
             throw new Error(`Missing subcommand for command \`${this.name}\`.`);
         }
