@@ -101,6 +101,11 @@ export namespace ExpireAgeConversion {
             if (includeMs && time.milliseconds) {
                 values.push(`${time.milliseconds} millisecond${time.milliseconds !== 1 ? 's' : ''}`);
             }
+
+            // Avoid string being empty when time is less than one second.
+            if (!includeMs && values.length === 0) {
+                values.push('0 seconds');
+            }
             return values.join(', ');
         }
     }
