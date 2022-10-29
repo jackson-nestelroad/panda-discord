@@ -1,6 +1,7 @@
 import { EmbedBuilder } from 'discord.js';
 
 import {
+    ArgumentAutocompleteOption,
     BaseHelpService,
     BuiltInHelpHandlers,
     HelpHandler,
@@ -11,6 +12,10 @@ import {
 import { ExampleBot } from '../example-bot';
 
 class BotNameHelpHandler extends HelpHandler<ExampleBot> {
+    public autocompleteOptions({ bot }: HelpServiceContext): ArgumentAutocompleteOption[] {
+        return [{ name: 'About Me', value: bot.name }];
+    }
+
     public async match({ bot }: HelpServiceContext, { query }: HelpServiceArgs): Promise<HelpHandlerMatcherReturnType> {
         return bot.name.localeCompare(query, undefined, { sensitivity: 'base' }) === 0;
     }

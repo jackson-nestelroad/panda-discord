@@ -1,5 +1,8 @@
 export { EnabledCommandType, NamedArgsOption, PandaDiscordBot, PandaOptions } from './bot';
 export {
+    ArgumentAutocompleteContext,
+    ArgumentAutocompleteFunction,
+    ArgumentAutocompleteOption,
     ArgumentsConfig,
     ArgumentType,
     ArgumentParserResult,
@@ -33,6 +36,7 @@ export { CommandPermissionOptions, CommandPermissionValidator, DefaultCommandPer
 export { EmbedOptions, EmbedProps, EmbedTemplates, EmbedType } from './embeds/options';
 export { BaseEvent, ExtendableClientEvents } from './events/base';
 export { EventConfig, EventMap, EventTypeArray } from './events/config';
+export { DefaultAutocompleteEvent } from './events/defaults/autocomplete';
 export { DefaultInteractionCreateEvent } from './events/defaults/interaction-create';
 export { DefaultMessageCreateEvent } from './events/defaults/message-create';
 export { DefaultSharedResumeEvent } from './events/defaults/shard-resume';

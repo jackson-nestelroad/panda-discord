@@ -1,7 +1,7 @@
 import { EmbedBuilder, Snowflake } from 'discord.js';
 
 import { EnabledCommandType, PandaDiscordBot } from '../bot';
-import { ArgumentType, SingleArgumentConfig } from '../commands/arguments';
+import { ArgumentAutocompleteOption, ArgumentType, SingleArgumentConfig } from '../commands/arguments';
 import { BaseCommand, ComplexCommand } from '../commands/base';
 import { CommandCategoryUtil } from '../commands/category';
 import { CommandMap } from '../commands/config';
@@ -198,9 +198,15 @@ export abstract class HelpHandler<
     constructor(protected readonly helper: Helper) {}
 
     /**
-     * Optionally initialize data for the help handler.
+     * Initializes data for the help handler.
      */
     public initialize?(): Promise<void>;
+
+    /**
+     * Gives options for the autocomplete handler.
+     * @param context Help service context.
+     */
+    public autocompleteOptions?(context: HelpServiceContext<Bot>): ArgumentAutocompleteOption[];
 
     /**
      * Matches the query to test if this help handler should handle it.
@@ -263,7 +269,7 @@ export namespace BuiltInHelpHandlers {
                 description += 'All commands are available as slash commands.';
             }
 
-            description += `\n\nUse \`${await this.helper.displayPrefix(context)}${
+            description += `\n\nUse \`${this.helper.displayPrefix(context)}${
                 this.helper.options.commandName
             } [category]\` to view commands in a specific category.`;
             embed.setDescription(description);
@@ -281,6 +287,13 @@ export namespace BuiltInHelpHandlers {
     export class CategoryHelpHandler extends HelpHandler {
         public async initialize(): Promise<void> {
             await this.helper.initializeCommandHelpCache();
+        }
+
+        public autocompleteOptions(context: HelpServiceContext): ArgumentAutocompleteOption[] {
+            return [...this.helper.commandListByCategory.keys()].map(category => ({
+                name: `${category} Category`,
+                value: category,
+            }));
         }
 
         public async match(
@@ -331,10 +344,24 @@ export namespace BuiltInHelpHandlers {
             await this.helper.initializeCommandHelpCache();
         }
 
+        public autocompleteOptions(context: HelpServiceContext): ArgumentAutocompleteOption[] {
+            const prefix = this.helper.displayPrefix(context);
+            return [...this.helper.commandListByCategory.values()]
+                .map(categoryMap => [...categoryMap.keys()])
+                .flat()
+                .map(command => ({ name: `${prefix}${command}`, value: command }));
+        }
+
         public async match(
-            { bot }: HelpServiceContext,
+            { bot, guildId }: HelpServiceContext,
             { query }: HelpServiceArgs,
         ): Promise<HelpHandlerMatcherReturnType> {
+            const prefix = bot.getPrefix(guildId);
+            if (query.startsWith('/')) {
+                query = query.slice(1);
+            } else if (query.startsWith(prefix)) {
+                query = query.slice(prefix.length);
+            }
             const cmd = bot.getCommandFromFullName(query);
             return { matched: !!cmd, matchedString: cmd?.fullName() };
         }
@@ -342,7 +369,7 @@ export namespace BuiltInHelpHandlers {
         public async run(context: HelpServiceContext, { query }: HelpServiceArgs, embed: EmbedBuilder): Promise<void> {
             // Query is a global command.
             const { bot } = context;
-            const prefix = await this.helper.displayPrefix(context);
+            const prefix = this.helper.displayPrefix(context);
             const cmd = bot.getCommandFromFullName(query);
             const fullName = cmd.fullName();
             embed.setTitle(`${prefix}${fullName} ${this.helper.createCommandArgsString(cmd)}`);
@@ -395,7 +422,7 @@ export namespace BuiltInHelpHandlers {
         public async run(context: HelpServiceContext, args: HelpServiceArgs, embed: EmbedBuilder) {
             // No handler matched the query.
             embed.setTitle('No Command Found');
-            embed.setDescription(`Command "${await this.helper.displayPrefix(context)}${args.query}" does not exist.`);
+            embed.setDescription(`Command "${this.helper.displayPrefix(context)}${args.query}" does not exist.`);
         }
     }
 }
@@ -467,6 +494,26 @@ export abstract class BaseHelpService<
      */
     public async refresh(): Promise<void> {
         await this.refreshHandlers();
+    }
+
+    /**
+     * Attempts to autocomplete the given help query using the registered help handlers.
+     * @param context Help service context.
+     * @param query Help query.
+     * @returns Array of autocomplete options.
+     */
+    public autocomplete(context: HelpServiceContext<Bot>, query: string): ArgumentAutocompleteOption[] {
+        const options = this.handlerInstances
+            .filter(handler => handler.autocompleteOptions)
+            .map(handler => handler.autocompleteOptions(context))
+            .flat();
+        // Only return options that starts with the current value, using base-sensitive comparison.
+        return options.filter(
+            ({ value }) =>
+                query.localeCompare(value.toString().substring(0, query.length), undefined, {
+                    sensitivity: 'base',
+                }) === 0,
+        );
     }
 
     /**

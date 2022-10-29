@@ -580,6 +580,7 @@ abstract class ParameterizedCommand<
                         required: config.required,
                         choices: config.choices?.length !== 0 ? config.choices : undefined ?? undefined,
                         channelTypes: config.channelTypes?.length !== 0 ? config.channelTypes : undefined ?? undefined,
+                        autocomplete: config.autocomplete ? true : undefined,
                     } as ApplicationCommandOptionData;
                 }),
             defaultMemberPermissions: this.memberPermissions ?? this.permission.memberPermissions ?? null,

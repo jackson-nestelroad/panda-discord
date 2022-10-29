@@ -6,9 +6,11 @@ import {
     GuildBasedChannel,
     GuildMember,
     Role,
+    Snowflake,
     User,
 } from 'discord.js';
 
+import { BaseCommand } from '..';
 import { PandaDiscordBot } from '../bot';
 import { ArgumentSplitter, SplitArgumentArray } from '../util/argument-splitter';
 import { Mentionable } from '../util/discord';
@@ -63,7 +65,7 @@ export enum ArgumentType {
     // If you would like to specify a subcommand, use the `NestedCommand` command class.
 }
 
-// Conditional type explicitly uses for mapping an argument type to its parsed value type.
+// Conditional type explicitly used for mapping an argument type to its parsed value type.
 type ArgumentTypeResultMap<A extends ArgumentType> = A extends ArgumentType.String
     ? string
     : A extends ArgumentType.Integer
@@ -86,6 +88,34 @@ type ArgumentTypeResultMap<A extends ArgumentType> = A extends ArgumentType.Stri
     ? Attachment
     : A extends ArgumentType.SplitArguments
     ? SplitArgumentArray
+    : never;
+
+// Conditional type explicitly used for mapping an argument type to its native value type, prior to parsing.
+//
+// In other words, an argument of type A is accepted as a value of type ArgumentTypeNativeMap<A> and parsed into a value
+// of type ArgumentTypeResultMap<A>.
+type ArgumentTypeNativeMap<A extends ArgumentType> = A extends ArgumentType.String
+    ? string
+    : A extends ArgumentType.Integer
+    ? number
+    : A extends ArgumentType.Boolean
+    ? boolean
+    : A extends ArgumentType.User
+    ? GuildMember
+    : A extends ArgumentType.Channel
+    ? GuildBasedChannel
+    : A extends ArgumentType.Role
+    ? Role
+    : A extends ArgumentType.Mentionable
+    ? Mentionable
+    : A extends ArgumentType.RestOfContent
+    ? string
+    : A extends ArgumentType.Number
+    ? number
+    : A extends ArgumentType.Attachment
+    ? Attachment
+    : A extends ArgumentType.SplitArguments
+    ? string
     : never;
 
 // The default value, which is a union of the above types.
@@ -329,6 +359,26 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
 // A transformer takes a parsed argument and converts it to a different value and possibly type.
 export type SingleArgumentTransformer<T = DefaultT, P = unknown> = (value: T, result: ArgumentParserResult<P>) => void;
 
+/**
+ * Option returned from an argument's autocomplete function.
+ */
+export type ArgumentAutocompleteOption = ApplicationCommandOptionChoiceData<string | number>;
+
+/**
+ * Context for an argument autocomplete function.
+ */
+export interface ArgumentAutocompleteContext<Bot extends PandaDiscordBot = PandaDiscordBot, Shared = any> {
+    value: string;
+    bot: PandaDiscordBot;
+    guildId: Snowflake;
+    command: BaseCommand<Bot, Shared>;
+}
+
+/**
+ * The type of an argument autocomplete function.
+ */
+export type ArgumentAutocompleteFunction = (context: ArgumentAutocompleteContext) => ArgumentAutocompleteOption[];
+
 // Types where transformers are completely optional.
 interface SingleArgumentTransformersOptionalConfig<T = DefaultT, P = T> {
     any?: SingleArgumentTransformer<T, P>;
@@ -354,6 +404,7 @@ type SingleTypedSingleArgumentConfig<A extends ArgumentType = ArgumentType, P = 
     channelTypes?: ArgumentTypeResultMap<A> extends GuildBasedChannel
         ? ApplicationCommandOptionAllowedChannelTypes[]
         : never;
+    autocomplete?: ArgumentTypeNativeMap<A> extends string | number ? ArgumentAutocompleteFunction : never;
 } & (ArgumentTypeResultMap<A> extends P
     ? {
           // If we can assign the type we parse to P, then transformers are optional.

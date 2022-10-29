@@ -26,6 +26,7 @@ import { CommandPermissionOptions } from './commands/permission';
 import { EmbedOptions, EmbedProps, EmbedTemplates } from './embeds/options';
 import { BaseEvent } from './events/base';
 import { EventConfig, EventMap, EventTypeArray } from './events/config';
+import { DefaultAutocompleteEvent } from './events/defaults/autocomplete';
 import { DefaultInteractionCreateEvent } from './events/defaults/interaction-create';
 import { DefaultMessageCreateEvent } from './events/defaults/message-create';
 import { DefaultReadyEvent } from './events/defaults/ready';
@@ -144,7 +145,7 @@ const defaultOptions: CompletePandaOptions = {
         intents: [GatewayIntentBits.Guilds],
     },
     commands: [HelpCommand, PingCommand],
-    events: [DefaultMessageCreateEvent, DefaultReadyEvent],
+    events: [DefaultMessageCreateEvent, DefaultReadyEvent, DefaultAutocompleteEvent],
     interactionEvent: DefaultInteractionCreateEvent,
     cooldownOffensesForTimeout: 5,
     owner: null,
@@ -684,6 +685,36 @@ export abstract class PandaDiscordBot {
         let i = 1;
         while (cmd && cmd.isNested && i < names.length) {
             cmd = cmd.subcommandMap.get(names[i++]);
+        }
+        return cmd;
+    }
+
+    /**
+     * Returns the command instance, if it exists, by an interaction with the bot.
+     * @param interaction Application command.
+     * @returns Command instance.
+     */
+    public getCommandFromInteraction(interaction: Interaction): BaseCommand {
+        if (!(interaction.isChatInputCommand() || interaction.isAutocomplete())) {
+            throw new Error(`Cannot retrieve command instance from non-command interaction.`);
+        }
+
+        let cmd = this.commands.get(interaction.commandName);
+        const subcommandGroup = interaction.options.getSubcommandGroup(false);
+        const subcommand = interaction.options.getSubcommand(false);
+        if (subcommandGroup) {
+            if (!cmd.subcommandMap.has(subcommandGroup)) {
+                throw new Error(`Invalid subcommand group for command ${cmd.name}.`);
+            }
+            cmd = cmd.subcommandMap.get(subcommandGroup);
+        }
+        if (subcommand) {
+            if (!cmd.subcommandMap.has(subcommand)) {
+                throw new Error(
+                    `Invalid subcommand for command ${cmd.name} (interaction command = ${interaction.commandName}).`,
+                );
+            }
+            cmd = cmd.subcommandMap.get(subcommand);
         }
         return cmd;
     }

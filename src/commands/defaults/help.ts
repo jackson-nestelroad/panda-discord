@@ -1,11 +1,7 @@
-import { EmbedBuilder, ShardClientUtil } from 'discord.js';
-
-import { EnabledCommandType, PandaDiscordBot } from '../../bot';
-import { ExpireAgeConversion } from '../../util/timed-cache';
-import { ArgumentType, ArgumentsConfig, SingleArgumentConfig } from '../arguments';
-import { BaseCommand, ComplexCommand, StandardCooldowns } from '../base';
-import { CommandCategoryUtil, DefaultCommandCategory } from '../category';
-import { CommandMap } from '../config';
+import { PandaDiscordBot } from '../../bot';
+import { ArgumentType, ArgumentsConfig } from '../arguments';
+import { ComplexCommand, StandardCooldowns } from '../base';
+import { DefaultCommandCategory } from '../category';
 import { CommandParameters } from '../params';
 import { DefaultCommandPermission } from '../permission';
 
@@ -28,6 +24,9 @@ export class HelpCommand<Bot extends PandaDiscordBot = PandaDiscordBot> extends 
             description: 'Command category or individual command.',
             type: ArgumentType.RestOfContent,
             required: false,
+            autocomplete: ({ bot, guildId, value }) => {
+                return bot.helpService.autocomplete({ bot, guildId }, value);
+            },
         },
     };
 
