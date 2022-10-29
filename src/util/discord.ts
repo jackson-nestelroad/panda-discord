@@ -1,4 +1,11 @@
-import { ApplicationCommand, ChatInputApplicationCommandData, GuildMember, Role, User } from 'discord.js';
+import {
+    ApplicationCommand,
+    ApplicationCommandOptionData,
+    ChatInputApplicationCommandData,
+    GuildMember,
+    Role,
+    User,
+} from 'discord.js';
 
 export type Mentionable = GuildMember | User | Role;
 
@@ -149,18 +156,7 @@ export namespace DiscordUtil {
             const a = old.options[i];
             const b = newData.options[i];
 
-            // Check base fields.
-            needsUpdate ||=
-                a.name !== b.name ||
-                a.description !== b.description ||
-                !!a['required'] !== !!b['required'] ||
-                // Old command stores a string, new data can store an integer or string.
-                // Just make sure to store a string so this comparison works!
-                a.type !== b.type ||
-                // Compare the choices and nested options themselves.
-                !deepEqual(a['choices'] ?? [], b['choices'] ?? []) ||
-                !deepEqual(a['options'] ?? [], b['options'] ?? []) ||
-                !deepEqual(a['channelTypes'] ?? [], b['channelTypes'] ?? []);
+            needsUpdate ||= !deepEqual(a, b);
         }
         return needsUpdate;
     }
