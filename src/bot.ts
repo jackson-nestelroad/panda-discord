@@ -804,9 +804,10 @@ export abstract class PandaDiscordBot {
      * Simply return a single string to use a universal prefix.
      *
      * Return `undefined` to use no prefix, which means chat commands are disabled unless the bot is mentioned.
-     * @param guildId
+     * @param guildId Guild ID.
+     * @returns Prefix for the guild
      */
-    public abstract getPrefix(guildId: Snowflake): Awaitable<string>;
+    public abstract getPrefix(guildId: Snowflake): string;
 
     /**
      * Run the bot, logging in with the given bot token.

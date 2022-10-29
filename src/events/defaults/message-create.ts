@@ -77,7 +77,7 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
             return;
         }
 
-        const prefix = await this.bot.getPrefix(msg.guild.id);
+        const prefix = this.bot.getPrefix(msg.guild.id);
 
         if (!msg.content.startsWith(prefix)) {
             // Bot is mentioned.

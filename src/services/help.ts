@@ -170,8 +170,8 @@ export class BaseHelpServiceInternal<Bot extends PandaDiscordBot = PandaDiscordB
      * @param context Help service context.
      * @returns Prefix, which is either the guild's prefix or a slash.
      */
-    public async displayPrefix({ bot, guildId }: HelpServiceContext<Bot>): Promise<string> {
-        return (bot.options.commandType & EnabledCommandType.Slash) !== 0 ? '/' : (await bot.getPrefix(guildId)) ?? '/';
+    public displayPrefix({ bot, guildId }: HelpServiceContext<Bot>): string {
+        return (bot.options.commandType & EnabledCommandType.Slash) !== 0 ? '/' : bot.getPrefix(guildId) ?? '/';
     }
 }
 
@@ -306,7 +306,7 @@ export namespace BuiltInHelpHandlers {
             embed.setTitle(`${query} Commands`);
             const categoryCommands = this.helper.commandListByCategory.get(query);
             let commandsString: string;
-            const prefix = await this.helper.displayPrefix(context);
+            const prefix = this.helper.displayPrefix(context);
             if (categoryCommands.size <= this.helper.options.singleColumnLimit) {
                 commandsString = [...categoryCommands.values()].map(value => `${prefix}${value}`).join('\n');
             } else {
