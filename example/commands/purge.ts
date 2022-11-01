@@ -6,8 +6,10 @@ import {
     CommandParameters,
     ComplexCommand,
     EmbedTemplates,
+    GuildMemberContextMenuCommand,
     StandardCooldowns,
 } from '../../src';
+import { InteractionCommandParameters } from '../../src/commands/params';
 import { CommandCategory, CommandPermission, ExampleBot } from '../example-bot';
 
 interface PurgeArgs {
@@ -16,12 +18,23 @@ interface PurgeArgs {
     channel?: TextBasedChannel;
 }
 
+class PurgeContextMenuCommand extends GuildMemberContextMenuCommand<ExampleBot, PurgeArgs> {
+    public name = 'Purge Messages';
+
+    public async run(params: InteractionCommandParameters<ExampleBot>, member: GuildMember): Promise<void> {
+        const args = await this.command.parseArguments(params, {}, { user: member });
+        await this.command.run(params, args);
+    }
+}
+
 export class PurgeCommand extends ComplexCommand<ExampleBot, PurgeArgs> {
     public name = 'purge';
     public description = 'Purges the most recent chunk of messages from a given user in a channel.';
     public category = CommandCategory.Staff;
     public permission = CommandPermission.Mod;
     public cooldown = StandardCooldowns.High;
+
+    public contextMenu = [PurgeContextMenuCommand];
 
     public readonly defaultNumberToDelete: number = 100;
 

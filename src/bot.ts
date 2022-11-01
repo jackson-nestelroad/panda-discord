@@ -1,7 +1,7 @@
 import {
     ActivityType,
     ApplicationCommandManager,
-    Awaitable,
+    ApplicationCommandType,
     Channel,
     Client,
     ClientOptions,
@@ -17,8 +17,9 @@ import {
 
 import { ArgumentType, SingleArgumentConfig } from './commands/arguments';
 import { BaseCommand } from './commands/base';
+import { BaseChatInputCommand } from './commands/chat-input';
 import { CommandSource } from './commands/command-source';
-import { CommandConfig, CommandMap, CommandTypeArray } from './commands/config';
+import { CommandConfig, CommandMap, CommandTypeArray, ContextMenuCommandMap } from './commands/config';
 import { HelpCommand } from './commands/defaults/help';
 import { PingCommand } from './commands/defaults/ping';
 import { CommandParameters } from './commands/params';
@@ -73,6 +74,14 @@ export enum EnabledCommandType {
      * Slash commands.
      */
     Slash = 1 << 1,
+    /**
+     * Context menu commands.
+     */
+    ContextMenu = 1 << 2,
+    /**
+     * Application commands.
+     */
+    Application = EnabledCommandType.Slash | EnabledCommandType.ContextMenu,
 }
 
 /**
@@ -150,7 +159,7 @@ const defaultOptions: CompletePandaOptions = {
     cooldownOffensesForTimeout: 5,
     owner: null,
     namedArgs: NamedArgsOption.Always,
-    commandType: EnabledCommandType.Slash,
+    commandType: EnabledCommandType.Application,
     runHelpNamedArg: 'help',
 };
 
@@ -211,6 +220,11 @@ export abstract class PandaDiscordBot {
      * Maps a command name to the command instance that should handle it.
      */
     public commands: CommandMap<string>;
+
+    /**
+     * Maps a name to the context menu command instance that should handle it.
+     */
+    public contextMenuCommands: ContextMenuCommandMap<string>;
 
     /**
      * Maps an event name to the event instance that should handle it.
@@ -294,7 +308,9 @@ export abstract class PandaDiscordBot {
      * All data inside of each command will be reset.
      */
     public refreshCommands() {
-        this.commands = CommandConfig.build(this.options.commands);
+        const result = CommandConfig.build(this.options.commands);
+        this.commands = result.commands;
+        this.contextMenuCommands = result.contextMenuCommands;
     }
 
     /**
@@ -315,15 +331,17 @@ export abstract class PandaDiscordBot {
     }
 
     /**
-     * Get the proper command manager this command would belong to.
-     * @param cmd Command to search for.
-     * @returns Command manager the command should belong to.
+     * Get the proper command manager for the given guild ID.
+     *
+     * Returns the global command manager if the guild ID is undefined.
+     * @param guildId Optional guild ID.
+     * @returns Corresponding command manager.
      */
     protected async getCommandManager(
-        cmd: BaseCommand,
+        guildId: Snowflake | undefined,
     ): Promise<GuildApplicationCommandManager | ApplicationCommandManager> {
-        if (cmd.slashGuildId) {
-            const cmdGuild = this.client.guilds.cache.get(cmd.slashGuildId);
+        if (guildId) {
+            const cmdGuild = this.client.guilds.cache.get(guildId);
             if (cmdGuild.commands.cache.size === 0) {
                 await cmdGuild.commands.fetch();
             }
@@ -334,9 +352,12 @@ export abstract class PandaDiscordBot {
     }
 
     /**
-     * Creates all necessary slash commands from the internal command map.
+     * Creates all necessary application commands from the internal command maps.
      */
-    protected async createSlashCommands() {
+    protected async createApplicationCommands() {
+        const slashEnabled = (this.options.commandType & EnabledCommandType.Slash) !== 0;
+        const contextMenuEnabled = (this.options.commandType & EnabledCommandType.ContextMenu) !== 0;
+
         // Store all global commands in the cache.
         await this.client.application.commands.fetch();
 
@@ -344,9 +365,24 @@ export abstract class PandaDiscordBot {
         // removed from the bot.
         for (const [_, commandData] of this.client.application.commands.cache) {
             // This command has been removed altogether, or it has been moved to a guild.
-            const cmd = this.commands.get(commandData.name);
-            if (!cmd || !cmd.isSlashCommand || cmd.slashGuildId) {
-                await this.client.application.commands.delete(commandData);
+            switch (commandData.type) {
+                case ApplicationCommandType.ChatInput:
+                    {
+                        const cmd = this.commands.get(commandData.name);
+                        if (!slashEnabled || !cmd || !cmd.isSlashCommand || cmd.guildId) {
+                            await this.client.application.commands.delete(commandData);
+                        }
+                    }
+                    break;
+                case ApplicationCommandType.Message:
+                case ApplicationCommandType.User:
+                    {
+                        const cmd = this.contextMenuCommands.get(commandData.name);
+                        if (!contextMenuEnabled || !cmd || cmd.guildId) {
+                            await this.client.application.commands.delete(commandData);
+                        }
+                    }
+                    break;
             }
         }
 
@@ -357,15 +393,15 @@ export abstract class PandaDiscordBot {
 
         // Go through every internal command and possibly update its slash command.
         for (const [name, cmd] of this.commands) {
-            if (cmd.isSlashCommand) {
-                const newData = cmd.commandData();
-                const cmdManager = await this.getCommandManager(cmd);
+            const cmdManager = await this.getCommandManager(cmd.guildId);
+            const old = cmdManager.cache.find(cmd => cmd.name === name);
 
-                // Check if command already exists.
-                // If so, check if it has been updated in any way.
-                const old = cmdManager.cache.find(cmd => cmd.name === name);
+            if (slashEnabled && cmd.isSlashCommand) {
+                const newData = cmd.commandData();
+
+                // If command already exists, check if it needs to be updated in any way.
                 if (old) {
-                    if (DiscordUtil.slashCommandNeedsUpdate(old, newData)) {
+                    if (DiscordUtil.applicationCommandNeedsUpdate(old, newData)) {
                         console.log(`Editing /${name}`);
                         await cmdManager.edit(old, newData);
                     }
@@ -373,25 +409,44 @@ export abstract class PandaDiscordBot {
                     console.log(`Creating /${name}`);
                     await cmdManager.create(newData);
                 }
-            } else {
-                // Remove command if it exists when it should not.
-                const cmdManager = await this.getCommandManager(cmd);
-                const old = cmdManager.cache.find(cmd => cmd.name === name);
+            } else if (old) {
+            }
+        }
+
+        // Go through every context menu command and possibly update it.
+        for (const [name, cmd] of this.contextMenuCommands) {
+            const cmdManager = await this.getCommandManager(cmd.guildId);
+            const old = cmdManager.cache.find(appCmd => appCmd.type === cmd.type && appCmd.name === name);
+
+            if (contextMenuEnabled) {
+                const newData = cmd.commandData();
+
+                // If command already exists, check if it needs to be updated in any way.
                 if (old) {
-                    console.log(`Deleting /${name}`);
-                    await cmdManager.delete(old);
+                    if (DiscordUtil.applicationCommandNeedsUpdate(old, newData)) {
+                        console.log(`Editing context menu command ${name}`);
+                        await cmdManager.edit(old, newData);
+                    }
+                } else {
+                    console.log(`Creating context menu command ${name}`);
+                    await cmdManager.create(newData);
                 }
+            } else if (old) {
+                // Remove command if it exists when it should not.
+                console.log(`Deleting context menu command ${name}`);
+                await cmdManager.delete(old);
             }
         }
     }
 
     /**
-     * Creates and updates slash commands stored in the command map, then enabled the bot to receive slash commands.
+     * Creates and updates application commands stored in the command map, then enabled the bot to receive application
+     * commands.
      */
-    public async createAndEnableSlashCommands() {
+    public async createAndEnableApplicationCommands() {
         if (!this.slashCommandsEnabled) {
-            await this.createSlashCommands();
-            console.log('Slash commands ready');
+            await this.createApplicationCommands();
+            console.log('Application commands ready');
             const interactionEvent = new this.options.interactionEvent(this);
             this.events.set(interactionEvent.name, interactionEvent);
             this.slashCommandsEnabled = true;
@@ -399,11 +454,11 @@ export abstract class PandaDiscordBot {
     }
 
     /**
-     * Deletes all slash commands.
+     * Deletes all application commands.
      *
      * This can be an expensive operation depending on the number of guilds.
      */
-    public async deleteAllSlashCommands() {
+    public async deleteAllApplicationCommands() {
         await this.client.application.commands.set([]);
         for (const [_, guild] of this.client.guilds.cache) {
             await guild.commands.fetch();
@@ -679,11 +734,11 @@ export abstract class PandaDiscordBot {
      * @param fullName Full command name, each name separated by a space.
      * @returns Command instance.
      */
-    public getCommandFromFullName(fullName: string): BaseCommand {
+    public getCommandFromFullName(fullName: string): BaseChatInputCommand {
         const names = fullName.split(' ');
         let cmd = this.commands.get(names[0]);
         let i = 1;
-        while (cmd && cmd.isNested && i < names.length) {
+        while (cmd && cmd.isNested() && i < names.length) {
             cmd = cmd.subcommandMap.get(names[i++]);
         }
         return cmd;
@@ -694,7 +749,7 @@ export abstract class PandaDiscordBot {
      * @param interaction Application command.
      * @returns Command instance.
      */
-    public getCommandFromInteraction(interaction: Interaction): BaseCommand {
+    public getCommandFromInteraction(interaction: Interaction): BaseChatInputCommand {
         if (!(interaction.isChatInputCommand() || interaction.isAutocomplete())) {
             throw new Error(`Cannot retrieve command instance from non-command interaction.`);
         }
@@ -703,13 +758,13 @@ export abstract class PandaDiscordBot {
         const subcommandGroup = interaction.options.getSubcommandGroup(false);
         const subcommand = interaction.options.getSubcommand(false);
         if (subcommandGroup) {
-            if (!cmd.subcommandMap.has(subcommandGroup)) {
+            if (!cmd.isNested() || !cmd.subcommandMap.has(subcommandGroup)) {
                 throw new Error(`Invalid subcommand group for command ${cmd.name}.`);
             }
             cmd = cmd.subcommandMap.get(subcommandGroup);
         }
         if (subcommand) {
-            if (!cmd.subcommandMap.has(subcommand)) {
+            if (!cmd.isNested() || !cmd.subcommandMap.has(subcommand)) {
                 throw new Error(
                     `Invalid subcommand for command ${cmd.name} (interaction command = ${interaction.commandName}).`,
                 );
@@ -748,22 +803,21 @@ export abstract class PandaDiscordBot {
     }
 
     /**
-     * Validates if the given command and parameters should run.
+     * Validates if the given command parameters match the command permissions.
      * @param params Command parameters.
-     * @param command Command attempting to run.
+     * @param command Command.
      * @returns If the command should run.
      * True to run, false to not run.
      */
     public validate(params: CommandParameters<this>, command: BaseCommand): boolean {
-        const permission = command.permission;
-        if (permission.validate) {
-            return permission.validate(params);
+        if (command.permission.validate) {
+            return command.permission.validate(params);
         }
         if (command.memberPermissions) {
             return params.src.member.permissions.has(command.memberPermissions, true);
         }
-        if (permission.memberPermissions !== null && permission.memberPermissions !== undefined) {
-            return params.src.member.permissions.has(permission.memberPermissions, true);
+        if (command.permission.memberPermissions !== null && command.permission.memberPermissions !== undefined) {
+            return params.src.member.permissions.has(command.permission.memberPermissions, true);
         }
         return true;
     }

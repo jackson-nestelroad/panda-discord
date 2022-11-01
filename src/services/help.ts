@@ -2,8 +2,8 @@ import { EmbedBuilder, Snowflake } from 'discord.js';
 
 import { EnabledCommandType, PandaDiscordBot } from '../bot';
 import { ArgumentAutocompleteOption, ArgumentType, SingleArgumentConfig } from '../commands/arguments';
-import { BaseCommand, ComplexCommand } from '../commands/base';
 import { CommandCategoryUtil } from '../commands/category';
+import { BaseChatInputCommand, ComplexCommand } from '../commands/chat-input';
 import { CommandMap } from '../commands/config';
 import { ExpireAgeConversion } from '../util/timed-cache';
 import { BaseService } from './base';
@@ -94,7 +94,7 @@ export class BaseHelpServiceInternal<Bot extends PandaDiscordBot = PandaDiscordB
      * @param cmd Command.
      * @returns Full command-arguments string.
      */
-    public createCommandArgsString(cmd: BaseCommand) {
+    public createCommandArgsString(cmd: BaseChatInputCommand) {
         if (
             !(cmd instanceof ComplexCommand) ||
             this.options.optionalNamedArgumentsLimit === Infinity ||
@@ -127,21 +127,19 @@ export class BaseHelpServiceInternal<Bot extends PandaDiscordBot = PandaDiscordB
      */
     private addCommandsToCommandListByCategory(map: CommandMap<string>, nameChain: string[] = []): void {
         map.forEach((cmd, name) => {
-            if (cmd.isNested && !cmd.flattenHelpForSubCommands) {
+            if (cmd.isNested() && !cmd.flattenHelpForSubCommands) {
                 nameChain.push(name);
                 this.addCommandsToCommandListByCategory(cmd.subcommandMap, nameChain);
                 nameChain.pop();
-            } else {
-                if (CommandCategoryUtil.isPublic(cmd.category)) {
-                    const categoryName = CommandCategoryUtil.realName(cmd.category);
-                    if (!this.commandListByCategory.has(categoryName)) {
-                        this.commandListByCategory.set(categoryName, new Map());
-                    }
-                    const fullName = (nameChain.length > 0 ? nameChain.join(' ') + ' ' : '') + name;
-                    this.commandListByCategory
-                        .get(categoryName)
-                        .set(fullName, `${fullName} ${this.createCommandArgsString(cmd)}`);
+            } else if (CommandCategoryUtil.isPublic(cmd.category)) {
+                const categoryName = CommandCategoryUtil.realName(cmd.category);
+                if (!this.commandListByCategory.has(categoryName)) {
+                    this.commandListByCategory.set(categoryName, new Map());
                 }
+                const fullName = (nameChain.length > 0 ? nameChain.join(' ') + ' ' : '') + name;
+                this.commandListByCategory
+                    .get(categoryName)
+                    .set(fullName, `${fullName} ${this.createCommandArgsString(cmd)}`);
             }
         });
     }

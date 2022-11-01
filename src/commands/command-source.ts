@@ -1,12 +1,14 @@
 import {
+    BaseInteraction,
     CommandInteraction,
     Guild,
     GuildMember,
     InteractionReplyOptions,
     Message,
+    MessageCreateOptions,
     MessageEditOptions,
-    MessageOptions,
-    ReplyMessageOptions,
+    MessageReplyOptions,
+    RepliableInteraction,
     Snowflake,
     TextBasedChannel,
     User,
@@ -14,8 +16,8 @@ import {
 } from 'discord.js';
 
 type DisableSplit = { split?: false };
-type CommonReplyOptions = ReplyMessageOptions & InteractionReplyOptions & DisableSplit;
-type CommonSendOptions = MessageOptions & InteractionReplyOptions & DisableSplit;
+type CommonReplyOptions = MessageReplyOptions & InteractionReplyOptions & DisableSplit;
+type CommonSendOptions = MessageCreateOptions & InteractionReplyOptions & DisableSplit;
 type CommonEditOptions = MessageEditOptions & WebhookEditMessageOptions;
 
 export type ReplyResponse = string | CommonReplyOptions;
@@ -83,7 +85,7 @@ export class MockCommandSourceBase implements MockCommandSourceParams {
     }
 }
 
-export type Receivable = Message | CommandInteraction | MockCommandSourceBase;
+export type Receivable = Message | RepliableInteraction | MockCommandSourceBase;
 
 /**
  * All possible options for an underlying command source.
@@ -107,7 +109,7 @@ const CommandSourceTypeMap: Record<CommandSourceType, CommandSourceTypeMetadata>
         field: 'message',
     },
     [CommandSourceType.Interaction]: {
-        type: CommandInteraction,
+        type: BaseInteraction,
         field: 'interaction',
     },
     [CommandSourceType.Mock]: {
@@ -120,9 +122,10 @@ const CommandSourceTypeMap: Record<CommandSourceType, CommandSourceTypeMetadata>
     },
 } as const;
 
-type MessageCommandSource = CommandSource & { message: Message };
-type InteractionCommandSource = CommandSource & { interaction: CommandInteraction };
-type MockCommandSource = CommandSource & { mock: MockCommandSourceBase };
+export type MessageCommandSource = CommandSource & { message: Message };
+export type InteractionCommandSource = CommandSource & { interaction: RepliableInteraction };
+export type CommandInteractionCommandSource = CommandSource & { interaction: CommandInteraction };
+export type MockCommandSource = CommandSource & { mock: MockCommandSourceBase };
 
 /**
  * A wrapper around a message or an interaction, whichever receives the command.
@@ -167,6 +170,18 @@ export class CommandSource {
         return this.type === CommandSourceType.Interaction;
     }
 
+    /**
+     * Checks if the command originates from a command interaction.
+     * @returns Is the command source an interaction?
+     */
+    public isCommandInteraction(): this is CommandInteractionCommandSource {
+        return this.isInteraction() && this.interaction.isCommand();
+    }
+
+    /**
+     * Checks if the command originates from a mock object.
+     * @returns Is the command source a mock?
+     */
     public isMock(): this is MockCommandSource {
         return this.type === CommandSourceType.Mock;
     }

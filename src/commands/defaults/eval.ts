@@ -4,8 +4,8 @@ import { PandaDiscordBot } from '../../bot';
 import { DiscordUtil } from '../../util/discord';
 import { EvalUtil } from '../../util/eval';
 import { ArgumentType, ArgumentsConfig } from '../arguments';
-import { ComplexCommand, LegacyCommand } from '../base';
 import { DefaultCommandCategory } from '../category';
+import { ComplexCommand, LegacyCommand } from '../chat-input';
 import { ChatCommandParameters, CommandParameters } from '../params';
 import { DefaultCommandPermission } from '../permission';
 

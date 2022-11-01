@@ -1,8 +1,8 @@
 import { Interaction } from 'discord.js';
 
 import { EnabledCommandType, PandaDiscordBot } from '../../bot';
-import { CommandSource } from '../../commands/command-source';
-import { SlashCommandParameters } from '../../commands/params';
+import { CommandInteractionCommandSource, CommandSource } from '../../commands/command-source';
+import { InteractionCommandParameters, SlashCommandParameters } from '../../commands/params';
 import { BaseEvent } from '../base';
 
 /**
@@ -19,8 +19,8 @@ export class DefaultInteractionCreateEvent extends BaseEvent<'interactionCreate'
             return;
         }
 
-        // Only serve chat input commands in this handler.
-        if (!interaction.isChatInputCommand()) {
+        // Only serve commands in this handler.
+        if (!interaction.isCommand()) {
             return;
         }
 
@@ -34,29 +34,42 @@ export class DefaultInteractionCreateEvent extends BaseEvent<'interactionCreate'
             return;
         }
 
-        // Global command.
-        if (this.bot.commands.has(interaction.commandName)) {
+        if (interaction.isChatInputCommand()) {
             const params: SlashCommandParameters = {
                 bot: this.bot,
-                src: new CommandSource(interaction),
+                src: new CommandSource(interaction) as CommandInteractionCommandSource,
                 options: interaction.options,
-                guildId: interaction.guild?.id,
+                guildId: interaction.guildId,
                 extraArgs: {},
             };
-
-            try {
-                const command = this.bot.commands.get(interaction.commandName);
-                if (command.disableSlash) {
-                    return;
-                }
-                if (this.bot.validate(params, command)) {
+            if (this.bot.commands.has(interaction.commandName)) {
+                try {
+                    const command = this.bot.commands.get(interaction.commandName);
+                    if (command.disableSlash) {
+                        return;
+                    }
                     await command.executeSlash(params);
-                } else {
-                    await params.src.reply({ content: 'Permission denied', ephemeral: true });
+                } catch (error) {
+                    await this.bot.sendError(params.src, error);
                 }
-            } catch (error) {
-                this.bot.sendError(params.src, error);
             }
+        } else if (interaction.isContextMenuCommand()) {
+            const params: InteractionCommandParameters = {
+                bot: this.bot,
+                src: new CommandSource(interaction) as CommandInteractionCommandSource,
+                guildId: interaction.guildId,
+                extraArgs: {},
+            };
+            if (this.bot.contextMenuCommands.has(interaction.commandName)) {
+                try {
+                    const command = this.bot.contextMenuCommands.get(interaction.commandName);
+                    await command.execute(params);
+                } catch (error) {
+                    await this.bot.sendError(params.src, error);
+                }
+            }
+        } else {
+            throw new Error(`Unknown command interaction type.`);
         }
     }
 }

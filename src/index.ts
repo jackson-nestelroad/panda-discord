@@ -6,32 +6,56 @@ export {
     ArgumentsConfig,
     ArgumentType,
     ArgumentParserResult,
+    ParseableArguments,
     SingleArgumentConfig,
     SingleArgumentTransformer,
 } from './commands/arguments';
+export { BaseCommand } from './commands/base';
 export {
-    BaseCommand,
+    BaseChatInputCommand,
     ComplexCommand,
     LegacyCommand,
     NestedCommand,
     SimpleCommand,
     StandardCooldowns,
-} from './commands/base';
+} from './commands/chat-input';
 export { CommandCategoryUtil, DefaultCommandCategory } from './commands/category';
 export {
+    CommandInteractionCommandSource,
     CommandSource,
     EditResponse,
+    InteractionCommandSource,
+    MessageCommandSource,
+    MockCommandSource,
     MockCommandSourceParams,
     MockCommandSourceBase,
     Receivable,
     ReplyResponse,
     SendResponse,
 } from './commands/command-source';
-export { CommandConfig, CommandMap, CommandTypeArray } from './commands/config';
+export {
+    CommandConfig,
+    CommandMap,
+    CommandTypeArray,
+    ContextMenuCommandArray,
+    ContextMenuCommandMap,
+} from './commands/config';
+export {
+    BaseContextMenuCommand,
+    ContextMenuCommandClassType,
+    GuildMemberContextMenuCommand,
+    MessageContextMenuCommand,
+    UserContextMenuCommand,
+} from './commands/context-menu';
 export { EvalCommand } from './commands/defaults/eval';
 export { HelpCommand } from './commands/defaults/help';
 export { PingCommand } from './commands/defaults/ping';
-export { CommandParameters, ChatCommandParameters, SlashCommandParameters } from './commands/params';
+export {
+    CommandParameters,
+    ChatCommandParameters,
+    InteractionCommandParameters,
+    SlashCommandParameters,
+} from './commands/params';
 export { CommandPermissionOptions, CommandPermissionValidator, DefaultCommandPermission } from './commands/permission';
 export { EmbedOptions, EmbedProps, EmbedTemplates, EmbedType } from './embeds/options';
 export { BaseEvent, ExtendableClientEvents } from './events/base';

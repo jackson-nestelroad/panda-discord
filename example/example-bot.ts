@@ -16,7 +16,7 @@ export const CommandPermission = {
     Mod: {
         name: 'Moderator',
         memberPermissions:
-            PermissionFlagsBits.KickMembers | PermissionFlagsBits.KickMembers | PermissionFlagsBits.ManageMessages,
+            PermissionFlagsBits.KickMembers | PermissionFlagsBits.BanMembers | PermissionFlagsBits.ManageMessages,
     } as CommandPermissionOptions,
 };
 

@@ -1,7 +1,7 @@
 import { Message, Snowflake } from 'discord.js';
 
 import { EnabledCommandType, PandaDiscordBot } from '../../bot';
-import { CommandSource } from '../../commands/command-source';
+import { CommandSource, MessageCommandSource } from '../../commands/command-source';
 import { ChatCommandParameters } from '../../commands/params';
 import { SplitArgumentArray } from '../../util/argument-splitter';
 import { BaseEvent } from '../base';
@@ -20,6 +20,7 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
         content = content.replace(this.forbiddenMentionRegex, '@\u{200b}$1');
 
         const src = new CommandSource(msg);
+
         let args: SplitArgumentArray;
         try {
             args = this.bot.splitIntoArgs(content);
@@ -38,7 +39,7 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
 
         const params: ChatCommandParameters = {
             bot: this.bot,
-            src,
+            src: src as MessageCommandSource,
             args,
             content,
             guildId,
@@ -52,9 +53,7 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
                 if (command.disableChat) {
                     return;
                 }
-                if (this.bot.validate(params, command)) {
-                    await command.executeChat(params);
-                }
+                await command.executeChat(params);
             } catch (error) {
                 await this.bot.sendError(params.src, error);
             }

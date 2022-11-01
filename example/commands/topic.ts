@@ -1,11 +1,28 @@
-import { ChannelType, GuildBasedChannel, PermissionFlagsBits } from 'discord.js';
+import { ChannelType, GuildBasedChannel, Message, PermissionFlagsBits } from 'discord.js';
 
-import { ArgumentType, ArgumentsConfig, CommandParameters, ComplexCommand, StandardCooldowns } from '../../src';
+import {
+    ArgumentType,
+    ArgumentsConfig,
+    CommandParameters,
+    ComplexCommand,
+    MessageContextMenuCommand,
+    StandardCooldowns,
+} from '../../src';
+import { InteractionCommandParameters } from '../../src/commands/params';
 import { CommandCategory, CommandPermission, ExampleBot } from '../example-bot';
 
 interface TopicArgs {
     topic: string;
     channel?: GuildBasedChannel;
+}
+
+class TopicContextMenuCommand extends MessageContextMenuCommand<ExampleBot, TopicArgs> {
+    public name = 'Set Message Content as Topic';
+
+    public async run(params: InteractionCommandParameters<ExampleBot>, message: Message) {
+        const args = await this.command.parseArguments(params, { topic: message.content });
+        await this.command.run(params, args);
+    }
 }
 
 export class TopicCommand extends ComplexCommand<ExampleBot, TopicArgs> {
@@ -16,6 +33,8 @@ export class TopicCommand extends ComplexCommand<ExampleBot, TopicArgs> {
     public cooldown = StandardCooldowns.Low;
 
     public memberPermissions = PermissionFlagsBits.ManageChannels;
+
+    public contextMenu = [TopicContextMenuCommand];
 
     public args: ArgumentsConfig<TopicArgs> = {
         topic: {

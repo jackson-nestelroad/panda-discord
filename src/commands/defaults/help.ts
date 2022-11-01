@@ -1,7 +1,7 @@
 import { PandaDiscordBot } from '../../bot';
 import { ArgumentType, ArgumentsConfig } from '../arguments';
-import { ComplexCommand, StandardCooldowns } from '../base';
 import { DefaultCommandCategory } from '../category';
+import { ComplexCommand, StandardCooldowns } from '../chat-input';
 import { CommandParameters } from '../params';
 import { DefaultCommandPermission } from '../permission';
 

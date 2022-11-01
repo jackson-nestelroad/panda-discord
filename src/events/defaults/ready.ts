@@ -13,10 +13,10 @@ export class DefaultReadyEvent extends BaseEvent<'ready'> {
         console.log(`Bot is logged in as ${this.bot.client.user.tag}.`);
         this.bot.setHelpPresence();
 
-        if ((this.bot.options.commandType & EnabledCommandType.Slash) !== 0) {
-            await this.bot.createAndEnableSlashCommands();
+        if ((this.bot.options.commandType & EnabledCommandType.Application) !== 0) {
+            await this.bot.createAndEnableApplicationCommands();
         } else {
-            await this.bot.deleteAllSlashCommands();
+            await this.bot.deleteAllApplicationCommands();
         }
     }
 }

@@ -10,11 +10,11 @@ import {
     User,
 } from 'discord.js';
 
-import { BaseCommand } from '..';
 import { PandaDiscordBot } from '../bot';
 import { ArgumentSplitter, SplitArgumentArray } from '../util/argument-splitter';
 import { Mentionable } from '../util/discord';
-import { ChatCommandParameters } from './params';
+import { BaseChatInputCommand } from './chat-input';
+import { ChatCommandParameters, CommandParameters } from './params';
 
 /**
  * Argument types supported by the internal parser.
@@ -122,15 +122,21 @@ type ArgumentTypeNativeMap<A extends ArgumentType> = A extends ArgumentType.Stri
 type DefaultT = ArgumentTypeResultMap<ArgumentType>;
 
 /**
- * Parsing context for a chat command argument.
+ * Base parsing context for commands that give their arguments as text.
  */
-export interface ChatCommandArgumentParsingContext<Bot extends PandaDiscordBot> {
+export interface BaseArgumentParsingContext {
     // The value given by the user.
     value: string;
     // The name of the argument.
     name: string;
     // The config data set up for the argument in the command.
     config: SingleArgumentConfig;
+}
+
+/**
+ * Parsing context for a chat command argument.
+ */
+export interface ChatCommandArgumentParsingContext<Bot extends PandaDiscordBot> extends BaseArgumentParsingContext {
     // If the argument is given as a named argument.
     isNamed: boolean;
     // The current index in the params.args array.
@@ -139,6 +145,14 @@ export interface ChatCommandArgumentParsingContext<Bot extends PandaDiscordBot> 
     attachmentIndex: number;
     // Parameters for the chat command.
     params: ChatCommandParameters<Bot>;
+}
+
+/**
+ * Parsing context for parsing a string into an argument.
+ */
+export interface StringArgumentParsingContext<Bot extends PandaDiscordBot> extends BaseArgumentParsingContext {
+    // Parameters that should always be available.
+    params: CommandParameters<Bot>;
 }
 
 /**
@@ -152,16 +166,29 @@ export interface ArgumentParserResult<T = DefaultT> {
     error?: string;
 }
 
+interface SlashArgumentParsers<A extends ArgumentType = ArgumentType> {
+    slash: (option: CommandInteractionOption, out: ArgumentParserResult<ArgumentTypeResultMap<A>>) => void;
+}
+
+interface ChatArgumentParsers<Bot extends PandaDiscordBot = PandaDiscordBot, A extends ArgumentType = ArgumentType> {
+    string: (
+        context: StringArgumentParsingContext<Bot>,
+        out: ArgumentParserResult<ArgumentTypeResultMap<A>>,
+    ) => void | Promise<void>;
+    chat?: (
+        context: ChatCommandArgumentParsingContext<Bot>,
+        out: ArgumentParserResult<ArgumentTypeResultMap<A>>,
+    ) => void | Promise<void>;
+}
+
+type ArgumentParsers<
+    Bot extends PandaDiscordBot = PandaDiscordBot,
+    A extends ArgumentType = ArgumentType,
+> = SlashArgumentParsers<A> & ChatArgumentParsers<Bot, A>;
+
 export interface ArgumentTypeMetadata<Bot extends PandaDiscordBot, A extends ArgumentType = ArgumentType> {
-    asyncChatParser?: true;
     readsFromArgs?: boolean;
-    parsers: {
-        chat: (
-            context: ChatCommandArgumentParsingContext<Bot>,
-            out: ArgumentParserResult<ArgumentTypeResultMap<A>>,
-        ) => void | Promise<void>;
-        slash: (option: CommandInteractionOption, out: ArgumentParserResult<ArgumentTypeResultMap<A>>) => void;
-    };
+    parsers: ArgumentParsers<Bot, A>;
 }
 
 /**
@@ -171,7 +198,7 @@ export interface ArgumentTypeMetadata<Bot extends PandaDiscordBot, A extends Arg
 export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<PandaDiscordBot, type> } = {
     [ArgumentType.String]: {
         parsers: {
-            chat: (context, out) => {
+            string: (context, out) => {
                 if (context.config.choices) {
                     out.value = context.config.choices.find(
                         choice => choice.name.localeCompare(context.value, undefined, { sensitivity: 'accent' }) === 0,
@@ -190,7 +217,7 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
     },
     [ArgumentType.Integer]: {
         parsers: {
-            chat: (context, out) => {
+            string: (context, out) => {
                 if (context.config.choices) {
                     out.value = context.config.choices.find(
                         choice => choice.name.localeCompare(context.value, undefined, { sensitivity: 'accent' }) === 0,
@@ -212,7 +239,7 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
     },
     [ArgumentType.Boolean]: {
         parsers: {
-            chat: (context, out) => {
+            string: (context, out) => {
                 if ('true'.localeCompare(context.value, undefined, { sensitivity: 'accent' }) === 0) {
                     out.value = true;
                 } else if ('false'.localeCompare(context.value, undefined, { sensitivity: 'accent' }) === 0) {
@@ -227,9 +254,8 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
         },
     },
     [ArgumentType.User]: {
-        asyncChatParser: true,
         parsers: {
-            chat: async (context, out) => {
+            string: async (context, out) => {
                 out.value = await context.params.bot.getMemberFromString(context.value, context.params.guildId);
                 if (!out.value) {
                     out.error = `Invalid guild member \`${context.value}\` for argument \`${context.name}\`.`;
@@ -242,7 +268,7 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
     },
     [ArgumentType.Channel]: {
         parsers: {
-            chat: (context, out) => {
+            string: (context, out) => {
                 const channel = context.params.bot.getChannelFromString(context.value, context.params.guildId);
                 if (!channel || channel.isDMBased()) {
                     out.error = `Invalid channel \`${context.value}\` for argument \`${context.name}\`.`;
@@ -256,7 +282,7 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
     },
     [ArgumentType.Role]: {
         parsers: {
-            chat: (context, out) => {
+            string: (context, out) => {
                 out.value = context.params.bot.getRoleFromString(context.value, context.params.guildId);
                 if (!out.value) {
                     out.error = `Invalid role \`${context.value}\` for argument \`${context.name}\`.`;
@@ -269,7 +295,7 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
     },
     [ArgumentType.Mentionable]: {
         parsers: {
-            chat: (context, out) => {
+            string: (context, out) => {
                 out.value = context.params.bot.getAmbiguousMention(context.value, context.params.guildId);
                 if (!out.value) {
                     out.error = `Invalid mention \`${context.value}\` for argument \`${context.name}\`.`;
@@ -285,7 +311,7 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
     },
     [ArgumentType.Number]: {
         parsers: {
-            chat: (context, out) => {
+            string: (context, out) => {
                 if (context.config.choices) {
                     out.value = context.config.choices.find(
                         choice => choice.name.localeCompare(context.value, undefined, { sensitivity: 'accent' }) === 0,
@@ -308,6 +334,9 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
     [ArgumentType.Attachment]: {
         readsFromArgs: false,
         parsers: {
+            string: (context, out) => {
+                out.error = `Cannot parse attachment from string.`;
+            },
             chat: (context, out) => {
                 if (!context.params.src.isMessage()) {
                     return;
@@ -317,7 +346,7 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
                 } else {
                     const nextAttachment = context.params.src.message.attachments.at(context.attachmentIndex++);
                     if (!nextAttachment) {
-                        throw new Error(`Missing attachment for argument \`${context.name}\`.`);
+                        out.error = `Missing attachment for argument \`${context.name}\`.`;
                     }
                     out.value = nextAttachment;
                 }
@@ -329,10 +358,13 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
     },
     [ArgumentType.RestOfContent]: {
         parsers: {
+            string: (context, out) => {
+                ArgumentTypeConfig[ArgumentType.String].parsers.string(context, out);
+            },
             chat: (context, out) => {
                 context.value = context.params.args.restore(context.i);
                 context.i = context.params.args.length;
-                ArgumentTypeConfig[ArgumentType.String].parsers.chat(context, out);
+                ArgumentTypeConfig[ArgumentType.String].parsers.string(context, out);
             },
             slash: (option, out) => {
                 out.value = option.value as string;
@@ -341,6 +373,9 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
     },
     [ArgumentType.SplitArguments]: {
         parsers: {
+            string: (context, out) => {
+                out.value = context.params.bot.splitIntoArgs(context.value);
+            },
             chat: (context, out) => {
                 out.value = context.params.args.slice(context.i);
                 context.i = context.params.args.length;
@@ -371,7 +406,7 @@ export interface ArgumentAutocompleteContext<Bot extends PandaDiscordBot = Panda
     value: string;
     bot: PandaDiscordBot;
     guildId: Snowflake;
-    command: BaseCommand<Bot, Shared>;
+    command: BaseChatInputCommand<Bot, Shared>;
 }
 
 /**
@@ -437,9 +472,21 @@ interface UntypedSingleArgumentConfig {
     hidden?: boolean;
 }
 
-// Configuration for a single argument.
-// This is slightly different than what Discord offers since we handle subcommands differently.
+/**
+ * Configuration for a single argument.
+ * This is slightly different than what Discord offers since we handle subcommands differently.
+ */
 export type SingleArgumentConfig<P = unknown> = UntypedSingleArgumentConfig & TypedSingleArgumentConfig<P>;
 
-// Object for configuring arguments accepted and used by the command.
+/**
+ * Object for configuring arguments accepted and used by the command.
+ */
 export type ArgumentsConfig<Args> = { readonly [arg in keyof Args]-?: SingleArgumentConfig<Args[arg]> };
+
+/**
+ * Object for arguments that can be parsed into its respective Args object.
+ *
+ * This object works as if running a chat command, but each argument is already isolated by name. This object can be
+ * used to run a command when user input values are accepted from multiple locations, such as a context menu command.
+ */
+export type ParseableArguments<Args> = { [arg in keyof Args]?: string };

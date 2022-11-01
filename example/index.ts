@@ -4,6 +4,7 @@ import { config } from 'dotenv';
 import { EnabledCommandType, EvalCommand, HelpCommand, NamedArgsOption, PingCommand } from '../src';
 import { EightBallCommand } from './commands/8ball';
 import { FoodCommand } from './commands/food';
+import { GreetCommand } from './commands/greet';
 import { PurgeCommand } from './commands/purge';
 import { RenameFileCommand } from './commands/rename-file';
 import { RpsCommand } from './commands/rps';
@@ -21,6 +22,7 @@ config();
             HelpCommand,
             EvalCommand,
             EightBallCommand,
+            GreetCommand,
             PurgeCommand,
             FoodCommand,
             ShowArgsCommand,
@@ -38,7 +40,7 @@ config();
             ],
         },
         namedArgs: NamedArgsOption.Always,
-        commandType: EnabledCommandType.Chat | EnabledCommandType.Slash,
+        commandType: EnabledCommandType.Chat | EnabledCommandType.Application,
     });
     await bot.run(process.env.TOKEN);
 })().catch(error => {

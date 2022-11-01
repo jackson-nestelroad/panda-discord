@@ -1,11 +1,4 @@
-import {
-    ApplicationCommand,
-    ApplicationCommandOptionData,
-    ChatInputApplicationCommandData,
-    GuildMember,
-    Role,
-    User,
-} from 'discord.js';
+import { ApplicationCommand, ApplicationCommandData, GuildMember, Role, User } from 'discord.js';
 
 export type Mentionable = GuildMember | User | Role;
 
@@ -137,24 +130,21 @@ export namespace DiscordUtil {
      * @param newData New command data.
      * @returns Should the command be updated (are they different)?
      */
-    export function slashCommandNeedsUpdate(
-        old: ApplicationCommand,
-        newData: ChatInputApplicationCommandData,
-    ): boolean {
+    export function applicationCommandNeedsUpdate(old: ApplicationCommand, newData: ApplicationCommandData): boolean {
         // First check description and options length.
         let needsUpdate = old.name !== newData.name;
-        needsUpdate ||= old.description !== newData.description;
+        needsUpdate ||= old.description !== newData['description'];
         needsUpdate ||= !(
             old.defaultMemberPermissions?.equals(newData.defaultMemberPermissions) ??
             newData.defaultMemberPermissions === null
         );
         needsUpdate ||= old.dmPermission !== newData.dmPermission;
-        needsUpdate ||= old.options.length !== (newData.options?.length ?? 0);
+        needsUpdate ||= old.options.length !== (newData['options']?.length ?? 0);
 
         // Options lengths are the same, so check every option.
         for (let i = 0; !needsUpdate && i < old.options.length; ++i) {
             const a = old.options[i];
-            const b = newData.options[i];
+            const b = newData['options']?.[i];
 
             needsUpdate ||= !deepEqual(a, b);
         }

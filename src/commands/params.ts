@@ -3,7 +3,12 @@ import { Snowflake } from 'discord.js';
 
 import { PandaDiscordBot } from '../bot';
 import { SplitArgumentArray } from '../util/argument-splitter';
-import { CommandSource } from './command-source';
+import {
+    CommandInteractionCommandSource,
+    CommandSource,
+    InteractionCommandSource,
+    MessageCommandSource,
+} from './command-source';
 
 /**
  * Parameters given to all commands, whether running as a chat command or slash command.
@@ -31,6 +36,8 @@ export interface CommandParameters<Bot extends PandaDiscordBot = PandaDiscordBot
  * Parameters exclusive to chat commands.
  */
 export interface ChatCommandParameters<Bot extends PandaDiscordBot = PandaDiscordBot> extends CommandParameters<Bot> {
+    src: MessageCommandSource;
+
     /**
      * The split arguments of the chat command.
      *
@@ -42,6 +49,11 @@ export interface ChatCommandParameters<Bot extends PandaDiscordBot = PandaDiscor
      * The content of the chat message.
      */
     content: string;
+}
+
+export interface InteractionCommandParameters<Bot extends PandaDiscordBot = PandaDiscordBot>
+    extends CommandParameters<Bot> {
+    src: CommandInteractionCommandSource;
 }
 
 /**
@@ -57,7 +69,8 @@ export enum SlashCommandArgumentLevel {
 /**
  * Parameters exclusive to slash commands.
  */
-export interface SlashCommandParameters<Bot extends PandaDiscordBot = PandaDiscordBot> extends CommandParameters<Bot> {
+export interface SlashCommandParameters<Bot extends PandaDiscordBot = PandaDiscordBot>
+    extends InteractionCommandParameters<Bot> {
     /**
      * The options sent with the slash command.
      *
