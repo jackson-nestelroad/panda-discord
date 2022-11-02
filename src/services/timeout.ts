@@ -30,16 +30,18 @@ export class TimeoutService extends BaseService {
      * Puts a user on timeout.
      * @param user User to timeout.
      */
-    public async timeout(user: User) {
+    public async timeout(user: User, reason: string) {
         let offenses = this.timeoutCount.get(user.id) ?? 0;
         this.timeoutCount.set(user.id, ++offenses);
         const minutes = this.getTimeoutDuration(offenses);
         this.timeoutUsers.set(user.id, { minutes });
-        await user.send(
-            `You are being timed out for command spam. Your messages will be ignored for ${minutes} minute${
-                minutes === 1 ? '' : 's'
-            }.`,
+        const embed = this.bot.createEmbed();
+        embed.setTitle('Timeout');
+        embed.setDescription(
+            `You are now on timeout. Your messages will be ignored for ${minutes} minute${minutes === 1 ? '' : 's'}.`,
         );
+        embed.addFields({ name: 'Reason', value: reason });
+        await user.send({ embeds: [embed] });
     }
 
     /**

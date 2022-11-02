@@ -840,7 +840,10 @@ export abstract class PandaDiscordBot {
             } else {
                 const { expireAt, data: offenses } = entry;
                 if (this.timeoutService && offenses >= this.options.cooldownOffensesForTimeout) {
-                    await this.timeoutService.timeout(author);
+                    await this.timeoutService.timeout(
+                        author,
+                        `Attempted to use command ${offenses} time${offenses === 1 ? '' : 's'} when on cooldown.`,
+                    );
                 } else {
                     if (offenses === 0) {
                         cooldownSet.update(id, 1);
