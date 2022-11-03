@@ -313,13 +313,13 @@ export abstract class BaseChatInputCommand<
      * Runs the command when it is called from a message.
      * @param params Chat command parameters.
      */
-    public abstract runChat(params: ChatCommandParameters<Bot>): Promise<void>;
+    public abstract runChat(params: ChatCommandParameters<Bot>): Promise<boolean>;
 
     /**
      * Runs the command when it is called from an interaction.
      * @param params Slash command parameters.
      */
-    public abstract runSlash(params: SlashCommandParameters<Bot>): Promise<void>;
+    public abstract runSlash(params: SlashCommandParameters<Bot>): Promise<boolean>;
 
     protected throwConfigurationError(msg: string) {
         throw new Error(`Configuration error for command "${this.name}": ${msg}`);
@@ -378,47 +378,63 @@ export abstract class BaseChatInputCommand<
 
     /**
      * Executes the command as a chat command.
+     *
+     * Before executing the command, this method checks a few preconditions, such as validating permisions and checking
+     * if the user is on cooldown for the command. If the user fails any of these preconditions, `false` is returned.
+     * Otherwise, the command executes and this method returns `true`. If the command experiences a failure, it should
+     * throw an error to be caught by the caller.
      * @param params Chat command parameters.
-     * @returns Promise that resolves when the command finishes.
+     * @returns Promise that resolves when the command finishes. Promise contains `true` if the command executed and
+     * `false` if the command did not execute for some reason, such as for validation or cooldown reasons.
      */
-    public async executeChat(params: ChatCommandParameters<Bot>): Promise<void> {
+    public async executeChat(params: ChatCommandParameters<Bot>): Promise<boolean> {
         // Invalid permissions.
         if (!params.bot.validate(params, this)) {
-            return;
+            return false;
         }
 
         // Wrong guild.
         if (this.guildId && params.guildId !== this.guildId) {
-            return;
+            return false;
         }
 
-        if (await params.bot.handleCooldown(params.src, this.cooldownSet)) {
-            return this.runChat(params);
+        if (!(await params.bot.handleCooldown(params.src, this.cooldownSet))) {
+            return false;
         }
+
+        return await this.runChat(params);
     }
 
     /**
-     * Executes the command as a chat command.
-     * @param params Chat command parameters.
-     * @returns Promise that resolves when the command finishes.
+     * Executes the command as a slash command.
+     *
+     * Before executing the command, this method checks a few preconditions, such as validating permisions and checking
+     * if the user is on cooldown for the command. If the user fails any of these preconditions, `false` is returned.
+     * Otherwise, the command executes and this method returns `true`. If the command experiences a failure, it should
+     * throw an error to be caught by the caller.
+     * @param params Slash command parameters.
+     * @returns Promise that resolves when the command finishes. Promise contains `true` if the command executed and
+     * `false` if the command did not execute for some reason, such as for validation or cooldown reasons.
      */
-    public async executeSlash(params: SlashCommandParameters<Bot>): Promise<void> {
+    public async executeSlash(params: SlashCommandParameters<Bot>): Promise<boolean> {
         // Invalid permissions.
         if (!params.bot.validate(params, this)) {
             await params.src.reply({ content: 'Permission denied.', ephemeral: true });
-            return;
+            return false;
         }
 
         // Wrong guild.
         if (this.guildId && params.guildId !== this.guildId) {
             // This should not ever really happen if we upload the command correctly, but we check just in case.
             await params.src.reply({ content: 'Wrong guild.', ephemeral: true });
-            return;
+            return false;
         }
 
-        if (await params.bot.handleCooldown(params.src, this.cooldownSet)) {
-            return this.runSlash(params);
+        if (!(await params.bot.handleCooldown(params.src, this.cooldownSet))) {
+            return false;
         }
+
+        return await this.runSlash(params);
     }
 }
 
@@ -458,7 +474,7 @@ export abstract class SimpleCommand<Bot extends PandaDiscordBot, Shared = never>
             dmPermission: this.guildId ? null : !!this.enableInDM,
         };
     }
-    public async runChat(params: ChatCommandParameters<Bot>) {
+    public async runChat(params: ChatCommandParameters<Bot>): Promise<boolean> {
         // Avoid any parsing of the message content, because it doesn't matter.
         // ... except in the case where the user is asking for help.
         if (this.shouldParseNamedArgs(params)) {
@@ -471,14 +487,16 @@ export abstract class SimpleCommand<Bot extends PandaDiscordBot, Shared = never>
                 // User is asking for help on how to use this command.
                 const helpEmbed = await params.bot.helpService.help(params, { query: this.fullName() });
                 await params.src.send({ embeds: [helpEmbed] });
-                return;
+                return true;
             }
         }
-        return this.run(params);
+        await this.run(params);
+        return true;
     }
 
-    public async runSlash(params: SlashCommandParameters<Bot>) {
-        return this.run(params);
+    public async runSlash(params: SlashCommandParameters<Bot>): Promise<boolean> {
+        await this.run(params);
+        return true;
     }
 }
 
@@ -708,7 +726,7 @@ export abstract class ParameterizedCommand<
 
     // Shared parsing for slash commands.
     // Trivial since all arguments are parsed by Discord.
-    public async runSlash(params: SlashCommandParameters<Bot>): Promise<void> {
+    public async runSlash(params: SlashCommandParameters<Bot>): Promise<boolean> {
         // No parsing needed for slash commands.
         // Discord has already done it for us!
         // Just pick the right part of the option object depending on the type.
@@ -740,7 +758,8 @@ export abstract class ParameterizedCommand<
 
             parsedOptions[option?.name ?? arg] = result.value;
         }
-        return this.run(params, parsedOptions as Args);
+        await this.run(params, parsedOptions as Args);
+        return true;
     }
 }
 
@@ -798,7 +817,7 @@ export abstract class ComplexCommand<Bot extends PandaDiscordBot, Args, Shared =
     }
 
     // Parses chat commands to make them appear like slash commands.
-    public async runChat(params: ChatCommandParameters<Bot>): Promise<void> {
+    public async runChat(params: ChatCommandParameters<Bot>): Promise<boolean> {
         // Parse message according to arguments configuration.
         // This allows chat commands to behave almost exactly like slash commands.
         // However, there are a few limitations:
@@ -838,7 +857,7 @@ export abstract class ComplexCommand<Bot extends PandaDiscordBot, Args, Shared =
                 // User is asking for help on how to use this command.
                 const helpEmbed = await params.bot.helpService.help(params, { query: this.fullName() });
                 await params.src.send({ embeds: [helpEmbed] });
-                return;
+                return true;
             }
 
             for (let [name, value] of named.entries()) {
@@ -961,7 +980,8 @@ export abstract class ComplexCommand<Bot extends PandaDiscordBot, Args, Shared =
             }
         }
 
-        return this.run(params, parsed as Args);
+        await this.run(params, parsed as Args);
+        return true;
     }
 }
 
@@ -982,8 +1002,9 @@ export abstract class LegacyCommand<Bot extends PandaDiscordBot, Args, Shared = 
      */
     protected abstract parseChatArgs(params: ChatCommandParameters<Bot>): Args;
 
-    public async runChat(params: ChatCommandParameters<Bot>) {
-        return this.run(params, this.parseChatArgs(params));
+    public async runChat(params: ChatCommandParameters<Bot>): Promise<boolean> {
+        await this.run(params, this.parseChatArgs(params));
+        return true;
     }
 }
 
@@ -1104,7 +1125,7 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = never>
     }
 
     // Delegates a chat command to a subcommand.
-    public async runChat(params: ChatCommandParameters<Bot>) {
+    public async runChat(params: ChatCommandParameters<Bot>): Promise<boolean> {
         // Check for help named argument first, in case it was specified.
         if (this.shouldParseNamedArgs(params)) {
             const { named } = params.bot.extractNamedArgs(params.args);
@@ -1116,7 +1137,7 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = never>
                 // User is asking for help on how to use this command.
                 const helpEmbed = await params.bot.helpService.help(params, { query: this.fullName() });
                 await params.src.send({ embeds: [helpEmbed] });
-                return;
+                return true;
             }
         }
 
@@ -1135,7 +1156,7 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = never>
 
             const subcommand = this.subcommandMap.get(subName);
             if (params.bot.validate(params, subcommand)) {
-                await subcommand.executeChat(params);
+                return await subcommand.executeChat(params);
             }
         } else {
             throw new Error(`Invalid subcommand for command \`${this.name}\`.`);
@@ -1168,7 +1189,7 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = never>
     }
 
     // Delegates a slash command to a subcommand
-    public async runSlash(params: SlashCommandParameters<Bot>) {
+    public async runSlash(params: SlashCommandParameters<Bot>): Promise<boolean> {
         const subcommandSelected = this.getSubcommand(params);
         if (!subcommandSelected) {
             throw new Error(`Missing subcommand for command \`${this.name}\`.`);
@@ -1179,8 +1200,10 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = never>
             throw new Error(`Invalid subcommand for command \`${this.name}\`.`);
         }
 
-        if (params.bot.validate(params, subcommand)) {
-            await subcommand.executeSlash(params);
+        if (!params.bot.validate(params, subcommand)) {
+            return false;
         }
+
+        return await subcommand.executeSlash(params);
     }
 }

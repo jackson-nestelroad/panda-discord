@@ -46,27 +46,36 @@ export abstract class BaseContextMenuCommand<
 
     /**
      * Executes the command from the context menu.
+     *
+     * Before executing the command, this method checks a few preconditions, such as validating permisions and checking
+     * if the user is on cooldown for the command. If the user fails any of these preconditions, `false` is returned.
+     * Otherwise, the command executes and this method returns `true`. If the command experiences a failure, it should
+     * throw an error to be caught by the caller.
      * @param params Command parameters.
-     * @returns Promise that resolves when the command finishes.
+     * @returns Promise that resolves when the command finishes. Promise contains `true` if the command executed and
+     * `false` if the command did not execute for some reason, such as for validation or cooldown reasons.
      */
-    public async execute(params: InteractionCommandParameters<Bot>): Promise<void> {
+    public async execute(params: InteractionCommandParameters<Bot>): Promise<boolean> {
         // Invalid permissions.
         if (!params.bot.validate(params, this)) {
             await params.src.reply({ content: 'Permission denied.', ephemeral: true });
-            return;
+            return false;
         }
 
         // Wrong guild.
         if (this.guildId && params.guildId !== this.guildId) {
             // This should not ever really happen if we upload the command correctly, but we check just in case.
             await params.src.reply({ content: 'Wrong guild.', ephemeral: true });
-            return;
+            return false;
         }
 
         // Steal the base command's cooldown set.
-        if (await params.bot.handleCooldown(params.src, this.command['cooldownSet'])) {
-            return this.delegate(params);
+        if (!(await params.bot.handleCooldown(params.src, this.command['cooldownSet']))) {
+            return false;
         }
+
+        await this.delegate(params);
+        return true;
     }
 
     /**
