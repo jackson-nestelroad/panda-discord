@@ -796,7 +796,8 @@ export abstract class ComplexCommand<Bot extends PandaDiscordBot, Args, Shared =
 
         // Call the correct parser for the argument type.
         const result: ArgumentParserResult = {};
-        const parserResult = typeConfig.parsers.chat?.(context, result) ?? typeConfig.parsers.string(context, result);
+        let parser = typeConfig.parsers.chat ?? typeConfig.parsers.string;
+        const parserResult = parser(context, result);
         if (typeof parserResult?.['then'] === 'function') {
             await parserResult;
         }
