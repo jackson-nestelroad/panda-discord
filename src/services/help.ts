@@ -347,7 +347,7 @@ export namespace BuiltInHelpHandlers {
             return [...this.helper.commandListByCategory.values()]
                 .map(categoryMap => [...categoryMap.keys()])
                 .flat()
-                .map(command => ({ name: `${prefix}${command}`, value: `${prefix}${command}` }));
+                .map(command => ({ name: `${prefix}${command}`, value: `${command}` }));
         }
 
         public async match(
