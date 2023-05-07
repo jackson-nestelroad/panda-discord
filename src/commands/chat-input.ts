@@ -1169,9 +1169,7 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = never>
             params.content = params.content.substring(subNameIndex).trimStart();
 
             const subcommand = this.subcommandMap.get(subName)!;
-            if (params.bot.validate(params, subcommand)) {
-                return await subcommand.executeChat(params);
-            }
+            return await subcommand.executeChat(params);
         } else {
             throw new Error(`Invalid subcommand for command \`${this.name}\`.`);
         }
@@ -1215,10 +1213,6 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = never>
         const subcommand = this.subcommandMap.get(subcommandSelected);
         if (!subcommand) {
             throw new Error(`Invalid subcommand for command \`${this.name}\`.`);
-        }
-
-        if (!params.bot.validate(params, subcommand)) {
-            return false;
         }
 
         return await subcommand.executeSlash(params);
