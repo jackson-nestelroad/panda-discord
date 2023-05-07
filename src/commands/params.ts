@@ -3,12 +3,7 @@ import { Snowflake } from 'discord.js';
 
 import { PandaDiscordBot } from '../bot';
 import { SplitArgumentArray } from '../util/argument-splitter';
-import {
-    CommandInteractionCommandSource,
-    CommandSource,
-    InteractionCommandSource,
-    MessageCommandSource,
-} from './command-source';
+import { CommandInteractionCommandSource, CommandSource, MessageCommandSource } from './command-source';
 
 /**
  * Parameters given to all commands, whether running as a chat command or slash command.
@@ -21,7 +16,7 @@ export interface CommandParameters<Bot extends PandaDiscordBot = PandaDiscordBot
     /**
      * The guild the command was issued in.
      */
-    guildId: Snowflake;
+    guildId: Snowflake | null;
     /**
      * The source of the command.
      */

@@ -16,7 +16,7 @@ import { BaseService } from './base';
  */
 export interface HelpServiceContext<Bot extends PandaDiscordBot = PandaDiscordBot> {
     bot: Bot;
-    guildId: Snowflake;
+    guildId: Snowflake | null;
 }
 
 /**
@@ -30,7 +30,7 @@ export interface HelpServiceArgs {
      *
      * This can be a command category, command name, or bot-related other topic.
      */
-    query?: string;
+    query: string;
 }
 
 export interface HelpServiceOptions {
@@ -69,7 +69,7 @@ const defaultOptions: CompleteHelpServiceOptions = {
  */
 export class BaseHelpServiceInternal<Bot extends PandaDiscordBot = PandaDiscordBot> {
     public readonly options: CompleteHelpServiceOptions = {} as CompleteHelpServiceOptions;
-    public commandListByCategory: Map<string, Map<string, string>> = null;
+    public commandListByCategory: Map<string, Map<string, string>>;
 
     // Argument config used for condensed optional named arguments symbol.
     private readonly optionalArgsTemplate: SingleArgumentConfig = {
@@ -85,6 +85,7 @@ export class BaseHelpServiceInternal<Bot extends PandaDiscordBot = PandaDiscordB
 
     private mergeOptionsIn(options: Partial<HelpServiceOptions>): void {
         for (const key in defaultOptions) {
+            // @ts-ignore
             this.options[key] = options[key] ?? defaultOptions[key];
         }
     }
@@ -138,7 +139,7 @@ export class BaseHelpServiceInternal<Bot extends PandaDiscordBot = PandaDiscordB
                 }
                 const fullName = (nameChain.length > 0 ? nameChain.join(' ') + ' ' : '') + name;
                 this.commandListByCategory
-                    .get(categoryName)
+                    .get(categoryName)!
                     .set(fullName, `${fullName} ${this.createCommandArgsString(cmd)}`);
             }
         });
@@ -298,7 +299,7 @@ export namespace BuiltInHelpHandlers {
             context: HelpServiceContext,
             { query }: HelpServiceArgs,
         ): Promise<HelpHandlerMatcherReturnType> {
-            let matchedCategory: string = null;
+            let matchedCategory: string | undefined;
             for (const category of this.helper.commandListByCategory.keys()) {
                 if (category.localeCompare(query, undefined, { sensitivity: 'base' }) === 0) {
                     matchedCategory = category;
@@ -306,7 +307,7 @@ export namespace BuiltInHelpHandlers {
                 }
             }
 
-            if (matchedCategory !== null) {
+            if (matchedCategory !== undefined) {
                 return { matched: true, matchedString: matchedCategory };
             }
             return false;
@@ -315,7 +316,7 @@ export namespace BuiltInHelpHandlers {
         public async run(context: HelpServiceContext, { query }: HelpServiceArgs, embed: EmbedBuilder): Promise<void> {
             // Query is a category.
             embed.setTitle(`${query} Commands`);
-            const categoryCommands = this.helper.commandListByCategory.get(query);
+            const categoryCommands = this.helper.commandListByCategory.get(query)!;
             let commandsString: string;
             const prefix = this.helper.displayPrefix(context);
             if (categoryCommands.size <= this.helper.options.singleColumnLimit) {
@@ -357,7 +358,7 @@ export namespace BuiltInHelpHandlers {
             const prefix = bot.getPrefix(guildId);
             if (query.startsWith('/')) {
                 query = query.slice(1);
-            } else if (query.startsWith(prefix)) {
+            } else if (prefix && query.startsWith(prefix)) {
                 query = query.slice(prefix.length);
             }
             const cmd = bot.getCommandFromFullName(query);
@@ -368,7 +369,7 @@ export namespace BuiltInHelpHandlers {
             // Query is a global command.
             const { bot } = context;
             const prefix = this.helper.displayPrefix(context);
-            const cmd = bot.getCommandFromFullName(query);
+            const cmd = bot.getCommandFromFullName(query)!;
             const fullName = cmd.fullName();
             embed.setTitle(`${prefix}${fullName} ${this.helper.createCommandArgsString(cmd)}`);
             embed.addFields(
@@ -462,7 +463,7 @@ export abstract class BaseHelpService<
      */
     protected initializeEmbed({ bot }: HelpServiceContext): EmbedBuilder {
         const embed = bot.createEmbed();
-        embed.setAuthor({ name: bot.name + ' Help', iconURL: bot.avatarUrl });
+        embed.setAuthor({ name: bot.name + ' Help', iconURL: bot.avatarUrl ?? undefined });
         return embed;
     }
 
@@ -503,7 +504,7 @@ export abstract class BaseHelpService<
     public autocomplete(context: HelpServiceContext<Bot>, query: string): ArgumentAutocompleteOption[] {
         const options = this.handlerInstances
             .filter(handler => handler.autocompleteOptions)
-            .map(handler => handler.autocompleteOptions(context))
+            .map(handler => handler.autocompleteOptions!(context))
             .flat();
         // Only return options that starts with the current value, using base-sensitive comparison.
         return options.filter(

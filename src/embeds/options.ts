@@ -71,7 +71,10 @@ export class EmbedOptions {
         }
 
         if (this.footer) {
-            embed.setFooter({ text: typeof this.footer === 'string' ? this.footer : bot.name, iconURL: bot.avatarUrl });
+            embed.setFooter({
+                text: typeof this.footer === 'string' ? this.footer : bot.name,
+                iconURL: bot.avatarUrl ?? undefined,
+            });
         }
 
         return embed;

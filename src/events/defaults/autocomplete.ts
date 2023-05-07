@@ -16,10 +16,13 @@ export class DefaultAutocompleteEvent extends BaseEvent<'interactionCreate'> {
             return;
         }
         const cmd = this.bot.getCommandFromInteraction(interaction);
+        if (!cmd || !cmd.args) {
+            return;
+        }
         const focused = interaction.options.getFocused(true);
         const argConfig = cmd.args[focused.name];
         if (argConfig?.autocomplete) {
-            const response = cmd.args[focused.name]
+            const response = argConfig
                 .autocomplete({
                     value: focused.value,
                     bot: this.bot,

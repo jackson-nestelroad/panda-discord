@@ -127,7 +127,7 @@ class BaseTimedCache<K, T> {
      */
     public has(key: K): boolean {
         if (this.cache.has(key)) {
-            const entry = this.cache.get(key);
+            const entry = this.cache.get(key)!;
             if (new Date().valueOf() >= entry.expireAt) {
                 return false;
             }
@@ -143,7 +143,7 @@ class BaseTimedCache<K, T> {
      */
     public get(key: K): T | undefined {
         if (this.cache.has(key)) {
-            const entry = this.cache.get(key);
+            const entry = this.cache.get(key)!;
             if (new Date().valueOf() >= entry.expireAt) {
                 return undefined;
             }
@@ -159,7 +159,7 @@ class BaseTimedCache<K, T> {
      */
     public getEntry(key: K): TimedCacheEntry<T> | undefined {
         if (this.cache.has(key)) {
-            const entry = this.cache.get(key);
+            const entry = this.cache.get(key)!;
             if (new Date().valueOf() >= entry.expireAt) {
                 return undefined;
             }
@@ -210,7 +210,7 @@ export class TimedCache<K, T> extends BaseTimedCache<K, T> {
      */
     public update(key: K, value: T): void {
         if (this.cache.has(key)) {
-            const entry = this.cache.get(key);
+            const entry = this.cache.get(key)!;
             entry.data = value;
         }
     }
@@ -269,7 +269,7 @@ export class VariableTimedCache<K, T> extends BaseTimedCache<K, T> {
      */
     public update(key: K, value: T): void {
         if (this.cache.has(key)) {
-            const entry = this.cache.get(key);
+            const entry = this.cache.get(key)!;
             entry.data = value;
         }
     }

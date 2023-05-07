@@ -30,6 +30,7 @@ export abstract class BaseContextMenuCommand<
      */
     public initialize(): void {
         if (this.permission?.inherit ?? true) {
+            // @ts-ignore
             this['permission' as string] = this.command.permission;
         }
     }
@@ -39,7 +40,7 @@ export abstract class BaseContextMenuCommand<
             name: this.name,
             description: '',
             type: this.type,
-            defaultMemberPermissions: this.memberPermissions ?? this.permission.memberPermissions ?? null,
+            defaultMemberPermissions: this.memberPermissions ?? this.permission?.memberPermissions ?? null,
             dmPermission: !!this.enableInDM,
         };
     }
@@ -151,6 +152,9 @@ export abstract class GuildMemberContextMenuCommand<
     protected async delegate(params: InteractionCommandParameters<Bot>): Promise<void> {
         if (!params.src.isInteraction() || !params.src.interaction.isUserContextMenuCommand()) {
             throw new Error(`Context menu command is misconfigured. Interaction received does not target a user.`);
+        }
+        if (!params.src.guild) {
+            throw new Error(`Guild member context menu command cannot run outside of a guild.`);
         }
         // We fetch the guild member if needed to assure we have the entire object.
         const targetId = params.src.interaction.targetId;

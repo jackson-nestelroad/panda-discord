@@ -126,7 +126,7 @@ type DefaultT = ArgumentTypeResultMap<ArgumentType>;
  */
 export interface BaseArgumentParsingContext {
     // The value given by the user.
-    value: string;
+    value?: string;
     // The name of the argument.
     name: string;
     // The config data set up for the argument in the command.
@@ -201,7 +201,7 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
             string: (context, out) => {
                 if (context.config.choices) {
                     out.value = context.config.choices.find(
-                        choice => choice.name.localeCompare(context.value, undefined, { sensitivity: 'accent' }) === 0,
+                        choice => choice.name.localeCompare(context.value!, undefined, { sensitivity: 'accent' }) === 0,
                     )?.value as string;
                     if (out.value === undefined || out.value === null) {
                         out.error = `Invalid value \`${context.value}\` for argument \`${context.name}\`.`;
@@ -211,7 +211,7 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
                 }
             },
             slash: (option, out) => {
-                out.value = option.value.toString();
+                out.value = option.value?.toString();
             },
         },
     },
@@ -220,13 +220,13 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
             string: (context, out) => {
                 if (context.config.choices) {
                     out.value = context.config.choices.find(
-                        choice => choice.name.localeCompare(context.value, undefined, { sensitivity: 'accent' }) === 0,
+                        choice => choice.name.localeCompare(context.value!, undefined, { sensitivity: 'accent' }) === 0,
                     )?.value as number;
                     if (out.value === undefined || out.value === null) {
                         out.error = `Invalid value \`${context.value}\` for argument \`${context.name}\`.`;
                     }
                 } else {
-                    out.value = parseInt(context.value);
+                    out.value = parseInt(context.value!);
                     if (isNaN(out.value)) {
                         out.error = `Invalid integer value \`${context.value}\` for argument \`${context.name}\`.`;
                     }
@@ -240,9 +240,9 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
     [ArgumentType.Boolean]: {
         parsers: {
             string: (context, out) => {
-                if ('true'.localeCompare(context.value, undefined, { sensitivity: 'accent' }) === 0) {
+                if ('true'.localeCompare(context.value!, undefined, { sensitivity: 'accent' }) === 0) {
                     out.value = true;
-                } else if ('false'.localeCompare(context.value, undefined, { sensitivity: 'accent' }) === 0) {
+                } else if ('false'.localeCompare(context.value!, undefined, { sensitivity: 'accent' }) === 0) {
                     out.value = false;
                 } else {
                     out.error = `Invalid boolean value \`${context.value}\` for argument \`${context.name}\`.`;
@@ -256,7 +256,12 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
     [ArgumentType.User]: {
         parsers: {
             string: async (context, out) => {
-                out.value = await context.params.bot.getMemberFromString(context.value, context.params.guildId);
+                if (!context.params.guildId) {
+                    out.error = 'Cannot lookup guild member outside of guild.';
+                    return;
+                }
+                out.value =
+                    (await context.params.bot.getMemberFromString(context.value!, context.params.guildId)) ?? undefined;
                 if (!out.value) {
                     out.error = `Invalid guild member \`${context.value}\` for argument \`${context.name}\`.`;
                 }
@@ -269,7 +274,11 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
     [ArgumentType.Channel]: {
         parsers: {
             string: (context, out) => {
-                const channel = context.params.bot.getChannelFromString(context.value, context.params.guildId);
+                if (!context.params.guildId) {
+                    out.error = 'Cannot lookup channel outside of guild.';
+                    return;
+                }
+                const channel = context.params.bot.getChannelFromString(context.value!, context.params.guildId);
                 if (!channel || channel.isDMBased()) {
                     out.error = `Invalid channel \`${context.value}\` for argument \`${context.name}\`.`;
                 }
@@ -283,7 +292,11 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
     [ArgumentType.Role]: {
         parsers: {
             string: (context, out) => {
-                out.value = context.params.bot.getRoleFromString(context.value, context.params.guildId);
+                if (!context.params.guildId) {
+                    out.error = 'Cannot lookup role outside of guild.';
+                    return;
+                }
+                out.value = context.params.bot.getRoleFromString(context.value!, context.params.guildId) ?? undefined;
                 if (!out.value) {
                     out.error = `Invalid role \`${context.value}\` for argument \`${context.name}\`.`;
                 }
@@ -296,7 +309,11 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
     [ArgumentType.Mentionable]: {
         parsers: {
             string: (context, out) => {
-                out.value = context.params.bot.getAmbiguousMention(context.value, context.params.guildId);
+                if (!context.params.guildId) {
+                    out.error = 'Cannot lookup mentionable outside of guild.';
+                    return;
+                }
+                out.value = context.params.bot.getAmbiguousMention(context.value!, context.params.guildId) ?? undefined;
                 if (!out.value) {
                     out.error = `Invalid mention \`${context.value}\` for argument \`${context.name}\`.`;
                 }
@@ -314,13 +331,13 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
             string: (context, out) => {
                 if (context.config.choices) {
                     out.value = context.config.choices.find(
-                        choice => choice.name.localeCompare(context.value, undefined, { sensitivity: 'accent' }) === 0,
+                        choice => choice.name.localeCompare(context.value!, undefined, { sensitivity: 'accent' }) === 0,
                     )?.value as number;
                     if (out.value === undefined || out.value === null) {
                         out.error = `Invalid value \`${context.value}\` for argument \`${context.name}\`.`;
                     }
                 } else {
-                    out.value = parseFloat(context.value);
+                    out.value = parseFloat(context.value!);
                     if (isNaN(out.value)) {
                         out.error = `Invalid number value \`${context.value}\` for argument \`${context.name}\`.`;
                     }
@@ -374,7 +391,7 @@ export const ArgumentTypeConfig: { [type in ArgumentType]: ArgumentTypeMetadata<
     [ArgumentType.SplitArguments]: {
         parsers: {
             string: (context, out) => {
-                out.value = context.params.bot.splitIntoArgs(context.value);
+                out.value = context.params.bot.splitIntoArgs(context.value!);
             },
             chat: (context, out) => {
                 out.value = context.params.args.slice(context.i);
@@ -405,7 +422,7 @@ export type ArgumentAutocompleteOption = ApplicationCommandOptionChoiceData<stri
 export interface ArgumentAutocompleteContext<Bot extends PandaDiscordBot = PandaDiscordBot, Shared = any> {
     value: string;
     bot: PandaDiscordBot;
-    guildId: Snowflake;
+    guildId: Snowflake | null;
     command: BaseChatInputCommand<Bot, Shared>;
 }
 

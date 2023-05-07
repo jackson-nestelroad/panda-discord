@@ -9,6 +9,7 @@ import { PurgeCommand } from './commands/purge';
 import { RenameFileCommand } from './commands/rename-file';
 import { RpsCommand } from './commands/rps';
 import { ShowArgsCommand } from './commands/show-args';
+import { StopwatchCommand } from './commands/stopwatch';
 import { TopicCommand } from './commands/topic';
 import { ExampleBot } from './example-bot';
 
@@ -29,6 +30,7 @@ config();
             RpsCommand,
             TopicCommand,
             RenameFileCommand,
+            StopwatchCommand,
         ],
         client: {
             intents: [
@@ -42,6 +44,9 @@ config();
         namedArgs: NamedArgsOption.Always,
         commandType: EnabledCommandType.Chat | EnabledCommandType.Application,
     });
+    if (!process.env.TOKEN) {
+        throw new Error('TOKEN environment variable missing');
+    }
     await bot.run(process.env.TOKEN);
 })().catch(error => {
     console.error(error);

@@ -51,7 +51,7 @@ export namespace CommandConfig {
         const contextMenuCommands: BaseContextMenuCommand[] = [];
         const commands = [start];
         while (commands.length !== 0) {
-            const cmd = commands.shift();
+            const cmd = commands.shift()!;
             if (cmd.isParameterized() && cmd.contextMenu && Array.isArray(cmd.contextMenu)) {
                 for (const contextMenuCmd of cmd.contextMenu) {
                     const contextMenuInstance = new contextMenuCmd(cmd);

@@ -25,7 +25,7 @@ export class HelpCommand<Bot extends PandaDiscordBot = PandaDiscordBot> extends 
             type: ArgumentType.RestOfContent,
             required: false,
             autocomplete: ({ bot, guildId, value }) => {
-                return bot.helpService.autocomplete({ bot, guildId }, value);
+                return bot.helpService?.autocomplete({ bot, guildId }, value) ?? [];
             },
         },
     };
@@ -35,7 +35,7 @@ export class HelpCommand<Bot extends PandaDiscordBot = PandaDiscordBot> extends 
             throw new Error(`No help service is installed on the bot.`);
         }
 
-        const embed = await bot.helpService.help({ bot, guildId }, args);
+        const embed = await bot.helpService.help({ bot, guildId }, { query: args.query ?? '' });
         await src.send({ embeds: [embed] });
     }
 }

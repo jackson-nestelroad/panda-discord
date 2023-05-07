@@ -5,8 +5,8 @@ import { DiscordUtil } from '../../util/discord';
 import { EvalUtil } from '../../util/eval';
 import { ArgumentType, ArgumentsConfig } from '../arguments';
 import { DefaultCommandCategory } from '../category';
-import { ComplexCommand, LegacyCommand } from '../chat-input';
-import { ChatCommandParameters, CommandParameters } from '../params';
+import { ComplexCommand } from '../chat-input';
+import { CommandParameters } from '../params';
 import { DefaultCommandPermission } from '../permission';
 
 interface EvalArgs {
@@ -41,7 +41,7 @@ export class EvalCommand extends ComplexCommand<PandaDiscordBot, EvalArgs> {
     };
 
     public readonly maxLength = 1900;
-    public sensitivePattern: RegExp = null;
+    public sensitivePattern?: RegExp;
 
     public async run(params: CommandParameters, args: EvalArgs) {
         const { bot, src } = params;

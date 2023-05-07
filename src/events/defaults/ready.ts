@@ -10,7 +10,7 @@ export class DefaultReadyEvent extends BaseEvent<'ready'> {
     }
 
     public async run() {
-        console.log(`Bot is logged in as ${this.bot.client.user.tag}.`);
+        console.log(`Bot is logged in as ${this.bot.client.user!.tag}.`);
         this.bot.setHelpPresence();
 
         if ((this.bot.options.commandType & EnabledCommandType.Application) !== 0) {

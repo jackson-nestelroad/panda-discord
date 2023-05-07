@@ -36,7 +36,7 @@ export interface CommandPermissionOptions<Bot extends PandaDiscordBot = PandaDis
 export const DefaultCommandPermission = {
     Everyone: {
         name: 'Everyone',
-        memberPermissions: null,
+        memberPermissions: undefined,
     } as CommandPermissionOptions,
     Owner: {
         name: 'Bot Owner',

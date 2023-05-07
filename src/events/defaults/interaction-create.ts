@@ -44,7 +44,7 @@ export class DefaultInteractionCreateEvent extends BaseEvent<'interactionCreate'
             };
             if (this.bot.commands.has(interaction.commandName)) {
                 try {
-                    const command = this.bot.commands.get(interaction.commandName);
+                    const command = this.bot.commands.get(interaction.commandName)!;
                     if (command.disableSlash) {
                         return;
                     }
@@ -62,7 +62,7 @@ export class DefaultInteractionCreateEvent extends BaseEvent<'interactionCreate'
             };
             if (this.bot.contextMenuCommands.has(interaction.commandName)) {
                 try {
-                    const command = this.bot.contextMenuCommands.get(interaction.commandName);
+                    const command = this.bot.contextMenuCommands.get(interaction.commandName)!;
                     await command.execute(params);
                 } catch (error) {
                     await this.bot.sendError(params.src, error);

@@ -157,7 +157,7 @@ const defaultOptions: CompletePandaOptions = {
     events: [DefaultMessageCreateEvent, DefaultReadyEvent, DefaultAutocompleteEvent],
     interactionEvent: DefaultInteractionCreateEvent,
     cooldownOffensesForTimeout: 5,
-    owner: null,
+    owner: undefined as unknown as Snowflake,
     namedArgs: NamedArgsOption.Always,
     commandType: EnabledCommandType.Application,
     runHelpNamedArg: 'help',
@@ -263,6 +263,7 @@ export abstract class PandaDiscordBot {
 
     private mergeOptionsIn(options: Partial<PandaOptions>) {
         for (const key in defaultOptions) {
+            // @ts-ignore
             this.options[key] = options[key] ?? defaultOptions[key];
         }
     }
@@ -283,14 +284,14 @@ export abstract class PandaDiscordBot {
      * The bot's username, as it is currently cached on the Discord client object.
      */
     public get name(): string {
-        return this.client.user?.username;
+        return this.client.user!.username;
     }
 
     /**
      * The bot's avatar URL, as it is currently cached on the Discord client object.
      */
-    public get avatarUrl(): string {
-        return this.client.user?.avatarURL();
+    public get avatarUrl(): string | null {
+        return this.client.user!.avatarURL();
     }
 
     /**
@@ -298,7 +299,7 @@ export abstract class PandaDiscordBot {
      */
     public setHelpPresence(): void {
         const helpPrefix = (this.options.commandType & EnabledCommandType.Chat) !== 0 ? `@${this.name} ` : '/';
-        this.client.user.setActivity(`${helpPrefix}help`, {
+        this.client.user!.setActivity(`${helpPrefix}help`, {
             type: ActivityType.Playing,
         });
     }
@@ -341,13 +342,13 @@ export abstract class PandaDiscordBot {
         guildId: Snowflake | undefined,
     ): Promise<GuildApplicationCommandManager | ApplicationCommandManager> {
         if (guildId) {
-            const cmdGuild = this.client.guilds.cache.get(guildId);
+            const cmdGuild = this.client.guilds.cache.get(guildId)!;
             if (cmdGuild.commands.cache.size === 0) {
                 await cmdGuild.commands.fetch();
             }
             return cmdGuild.commands;
         } else {
-            return this.client.application.commands;
+            return this.client.application!.commands;
         }
     }
 
@@ -359,18 +360,19 @@ export abstract class PandaDiscordBot {
         const contextMenuEnabled = (this.options.commandType & EnabledCommandType.ContextMenu) !== 0;
 
         // Store all global commands in the cache.
-        await this.client.application.commands.fetch();
+        const applicationCommands = this.client.application!.commands;
+        await applicationCommands.fetch();
 
         // Look through all of the commands that currently exist as slash commands and delete ones that have been
         // removed from the bot.
-        for (const [_, commandData] of this.client.application.commands.cache) {
+        for (const [_, commandData] of applicationCommands.cache) {
             // This command has been removed altogether, or it has been moved to a guild.
             switch (commandData.type) {
                 case ApplicationCommandType.ChatInput:
                     {
                         const cmd = this.commands.get(commandData.name);
                         if (!slashEnabled || !cmd || !cmd.isSlashCommand || cmd.guildId) {
-                            await this.client.application.commands.delete(commandData);
+                            await applicationCommands.delete(commandData);
                         }
                     }
                     break;
@@ -379,7 +381,7 @@ export abstract class PandaDiscordBot {
                     {
                         const cmd = this.contextMenuCommands.get(commandData.name);
                         if (!contextMenuEnabled || !cmd || cmd.guildId) {
-                            await this.client.application.commands.delete(commandData);
+                            await applicationCommands.delete(commandData);
                         }
                     }
                     break;
@@ -459,7 +461,7 @@ export abstract class PandaDiscordBot {
      * This can be an expensive operation depending on the number of guilds.
      */
     public async deleteAllApplicationCommands() {
-        await this.client.application.commands.set([]);
+        await this.client.application!.commands.set([]);
         for (const [_, guild] of this.client.guilds.cache) {
             await guild.commands.fetch();
             if (guild.commands.cache.size !== 0) {
@@ -615,7 +617,7 @@ export abstract class PandaDiscordBot {
     public getRoleFromMention(mention: string, guildId: Snowflake): Role | null {
         const match = DiscordUtil.roleMentionRegex.exec(mention);
         if (match) {
-            return this.client.guilds.cache.get(guildId).roles.cache.get(match[1] as Snowflake) || null;
+            return this.client.guilds.cache.get(guildId)?.roles.cache.get(match[1] as Snowflake) ?? null;
         }
         return null;
     }
@@ -634,9 +636,9 @@ export abstract class PandaDiscordBot {
             return null;
         }
         if (match[1] === '@&') {
-            return this.client.guilds.cache.get(guildId).roles.cache.get(match[2] as Snowflake) || null;
+            return this.client.guilds.cache.get(guildId)?.roles.cache.get(match[2] as Snowflake) ?? null;
         }
-        return this.client.guilds.cache.get(guildId).members.cache.get(match[2] as Snowflake) || null;
+        return this.client.guilds.cache.get(guildId)?.members.cache.get(match[2] as Snowflake) ?? null;
     }
 
     /**
@@ -652,6 +654,9 @@ export abstract class PandaDiscordBot {
     public async getMemberFromString(str: string, guildId: Snowflake): Promise<GuildMember | null> {
         // Try mention first.
         const guild = this.client.guilds.cache.get(guildId);
+        if (!guild) {
+            return null;
+        }
         const match = DiscordUtil.userMentionRegex.exec(str);
         if (match) {
             return guild.members.cache.get(match[1] as Snowflake) || null;
@@ -684,6 +689,9 @@ export abstract class PandaDiscordBot {
     public getChannelFromString(str: string, guildId: Snowflake): Channel | null {
         // Try mention first.
         const guild = this.client.guilds.cache.get(guildId);
+        if (!guild) {
+            return null;
+        }
         const match = DiscordUtil.channelMentionRegex.exec(str);
         if (match) {
             return guild.channels.cache.get(match[1] as Snowflake) || null;
@@ -691,7 +699,7 @@ export abstract class PandaDiscordBot {
 
         // Try channel ID then name.
         if (guild.channels.cache.has(str as Snowflake)) {
-            return guild.channels.cache.get(str as Snowflake);
+            return guild.channels.cache.get(str as Snowflake) ?? null;
         }
         return (
             guild.channels.cache.find(
@@ -711,6 +719,9 @@ export abstract class PandaDiscordBot {
     public getRoleFromString(str: string, guildId: Snowflake): Role | null {
         // Try mention first.
         const guild = this.client.guilds.cache.get(guildId);
+        if (!guild) {
+            return null;
+        }
         const match = DiscordUtil.roleMentionRegex.exec(str);
         if (match) {
             return guild.roles.cache.get(match[1] as Snowflake) || null;
@@ -718,7 +729,7 @@ export abstract class PandaDiscordBot {
 
         // Try role ID then name.
         if (guild.roles.cache.has(str as Snowflake)) {
-            return guild.roles.cache.get(str as Snowflake);
+            return guild.roles.cache.get(str as Snowflake) ?? null;
         }
         return (
             guild.roles.cache.find(role => role.name.localeCompare(str, undefined, { sensitivity: 'accent' }) === 0) ||
@@ -734,14 +745,14 @@ export abstract class PandaDiscordBot {
      * @param fullName Full command name, each name separated by a space.
      * @returns Command instance.
      */
-    public getCommandFromFullName(fullName: string): BaseChatInputCommand {
+    public getCommandFromFullName(fullName: string): BaseChatInputCommand | null {
         const names = fullName.split(' ');
         let cmd = this.commands.get(names[0]);
         let i = 1;
         while (cmd && cmd.isNested() && i < names.length) {
             cmd = cmd.subcommandMap.get(names[i++]);
         }
-        return cmd;
+        return cmd ?? null;
     }
 
     /**
@@ -749,12 +760,15 @@ export abstract class PandaDiscordBot {
      * @param interaction Application command.
      * @returns Command instance.
      */
-    public getCommandFromInteraction(interaction: Interaction): BaseChatInputCommand {
+    public getCommandFromInteraction(interaction: Interaction): BaseChatInputCommand | null {
         if (!(interaction.isChatInputCommand() || interaction.isAutocomplete())) {
             throw new Error(`Cannot retrieve command instance from non-command interaction.`);
         }
 
         let cmd = this.commands.get(interaction.commandName);
+        if (!cmd) {
+            return null;
+        }
         const subcommandGroup = interaction.options.getSubcommandGroup(false);
         const subcommand = interaction.options.getSubcommand(false);
         if (subcommandGroup) {
@@ -764,14 +778,14 @@ export abstract class PandaDiscordBot {
             cmd = cmd.subcommandMap.get(subcommandGroup);
         }
         if (subcommand) {
-            if (!cmd.isNested() || !cmd.subcommandMap.has(subcommand)) {
+            if (!cmd!.isNested() || !cmd.subcommandMap.has(subcommand)) {
                 throw new Error(
-                    `Invalid subcommand for command ${cmd.name} (interaction command = ${interaction.commandName}).`,
+                    `Invalid subcommand for command ${cmd!.name} (interaction command = ${interaction.commandName}).`,
                 );
             }
             cmd = cmd.subcommandMap.get(subcommand);
         }
-        return cmd;
+        return cmd!;
     }
 
     /**
@@ -810,13 +824,13 @@ export abstract class PandaDiscordBot {
      * True to run, false to not run.
      */
     public validate(params: CommandParameters<this>, command: BaseCommand): boolean {
-        if (command.permission.validate) {
+        if (command.permission?.validate) {
             return command.permission.validate(params);
         }
         if (command.memberPermissions) {
             return params.src.member.permissions.has(command.memberPermissions, true);
         }
-        if (command.permission.memberPermissions !== null && command.permission.memberPermissions !== undefined) {
+        if (command.permission?.memberPermissions !== null && command.permission?.memberPermissions !== undefined) {
             return params.src.member.permissions.has(command.permission.memberPermissions, true);
         }
         return true;
@@ -830,7 +844,7 @@ export abstract class PandaDiscordBot {
      * @returns Promise for a boolean, which indicates if the command should proceed or not.
      * True means the command should execute, false means the command should not.
      */
-    public async handleCooldown(src: CommandSource, cooldownSet: TimedCache<Snowflake, number>): Promise<boolean> {
+    public async handleCooldown(src: CommandSource, cooldownSet?: TimedCache<Snowflake, number>): Promise<boolean> {
         if (cooldownSet) {
             const author = src.author;
             const id = author.id;
@@ -895,7 +909,7 @@ export abstract class PandaDiscordBot {
      * @param guildId Guild ID.
      * @returns Prefix for the guild
      */
-    public abstract getPrefix(guildId: Snowflake): string;
+    public abstract getPrefix(guildId: Snowflake | null): string | undefined;
 
     /**
      * Run the bot, logging in with the given bot token.

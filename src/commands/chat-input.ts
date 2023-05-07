@@ -52,6 +52,7 @@ export const StandardCooldowns: Readonly<Record<keyof typeof StandardCooldownObj
  */
 namespace InternalCommandModifiers {
     export function setShared<Shared>(cmd: BaseChatInputCommand<PandaDiscordBot, Shared>, shared: Shared) {
+        // @ts-ignore
         cmd['shared' as string] = shared;
     }
 
@@ -59,18 +60,22 @@ namespace InternalCommandModifiers {
         child: BaseChatInputCommand<PandaDiscordBot, Shared>,
         parent: BaseChatInputCommand<PandaDiscordBot, Shared>,
     ) {
+        // @ts-ignore
         child['parentCommand' as string] = parent;
     }
 
     export function setNestedDepth(cmd: BaseChatInputCommand, nestedLevel: number) {
+        // @ts-ignore
         cmd['nestedDepth' as string] = nestedLevel;
     }
 
     export function setCategory(cmd: BaseChatInputCommand, category: string) {
+        // @ts-ignore
         cmd['category' as string] = category;
     }
 
     export function setPermission(cmd: BaseChatInputCommand, permission: CommandPermissionOptions) {
+        // @ts-ignore
         cmd['permission' as string] = permission;
     }
 
@@ -78,6 +83,7 @@ namespace InternalCommandModifiers {
         cmd: NestedCommand<Bot, Shared>,
         subcommandMap: CommandMap<string, Bot, Shared>,
     ) {
+        // @ts-ignore
         cmd['subcommandMap' as string] = subcommandMap;
     }
 }
@@ -260,7 +266,7 @@ export abstract class BaseChatInputCommand<
     /**
      * Maps user IDs to the number of times they have tried to use this command before their cooldown has finished.
      */
-    private cooldownSet: TimedCache<Snowflake, number> = null;
+    private cooldownSet?: TimedCache<Snowflake, number>;
 
     /**
      * Checks if the command should be created as a slash command.
@@ -340,6 +346,7 @@ export abstract class BaseChatInputCommand<
                 parseNamedArgs &&= false;
                 break;
             case NamedArgsOption.IfNeeded:
+                // @ts-ignore
                 parseNamedArgs &&= this['usesNamedArgs'];
                 break;
         }
@@ -357,7 +364,7 @@ export abstract class BaseChatInputCommand<
         if (this.cooldown !== undefined) {
             this.cooldownSet = new TimedCache(this.cooldown);
             if (this.cooldownSet.expireAge <= 0) {
-                this.cooldownSet = null;
+                delete this.cooldownSet;
             }
         }
 
@@ -445,7 +452,7 @@ export abstract class SimpleCommand<Bot extends PandaDiscordBot, Shared = never>
     Bot,
     Shared
 > {
-    public args: null = null;
+    public args: never;
 
     public isParameterized(): false {
         return false;
@@ -471,7 +478,7 @@ export abstract class SimpleCommand<Bot extends PandaDiscordBot, Shared = never>
             description: this.description,
             options: [],
             defaultMemberPermissions: this.memberPermissions ?? this.permission.memberPermissions ?? null,
-            dmPermission: this.guildId ? null : !!this.enableInDM,
+            dmPermission: this.guildId ? undefined : !!this.enableInDM,
         };
     }
     public async runChat(params: ChatCommandParameters<Bot>): Promise<boolean> {
@@ -625,18 +632,21 @@ export abstract class ParameterizedCommand<
                     } as ApplicationCommandOptionData;
                 }),
             defaultMemberPermissions: this.memberPermissions ?? this.permission.memberPermissions ?? null,
-            dmPermission: this.guildId ? null : !!this.enableInDM,
+            dmPermission: this.guildId ? undefined : !!this.enableInDM,
         };
     }
 
     protected runTransformer(argConfig: SingleArgumentConfig, result: ArgumentParserResult, slash: boolean): void {
+        if (!result.value) {
+            return;
+        }
         if (argConfig.transformers) {
             if (argConfig.transformers.any) {
-                (argConfig.transformers.any as SingleArgumentTransformer)(result.value, result);
+                (argConfig.transformers.any as SingleArgumentTransformer)(result.value!, result);
             } else if (slash && argConfig.transformers.slash) {
-                (argConfig.transformers.slash as SingleArgumentTransformer)(result.value, result);
+                (argConfig.transformers.slash as SingleArgumentTransformer)(result.value!, result);
             } else if (!slash && argConfig.transformers.chat) {
-                (argConfig.transformers.chat as SingleArgumentTransformer)(result.value, result);
+                (argConfig.transformers.chat as SingleArgumentTransformer)(result.value!, result);
             }
         }
     }
@@ -658,17 +668,14 @@ export abstract class ParameterizedCommand<
     ): Promise<Args> {
         // We need to create a fake context here for parsing like a chat command.
         // The chat parser uses this context object, but it does not necessarily use everything here.
-        const context: StringArgumentParsingContext<Bot> = {
-            value: null,
-            name: null,
-            config: null,
+        const context = {
             params: {
                 bot: params.bot,
                 guildId: params.guildId,
                 src: params.src,
                 extraArgs: {},
             },
-        };
+        } as StringArgumentParsingContext<Bot>;
 
         for (const arg in this.args) {
             if (parsed[arg] !== undefined && parsed[arg] !== null) {
@@ -702,6 +709,7 @@ export abstract class ParameterizedCommand<
             } else {
                 // Argument was given.
                 const parserResult = typeConfig.parsers.string(context, result);
+                // @ts-ignore
                 if (typeof parserResult?.['then'] === 'function') {
                     await parserResult;
                 }
@@ -719,6 +727,7 @@ export abstract class ParameterizedCommand<
             }
 
             // Assign the parsed value into the resulting object for the commandt to use.
+            // @ts-ignore
             parsed[arg as string] = result.value;
         }
         return parsed as Args;
@@ -756,6 +765,7 @@ export abstract class ParameterizedCommand<
                 throw new Error(result.error);
             }
 
+            // @ts-ignore
             parsedOptions[option?.name ?? arg] = result.value;
         }
         await this.run(params, parsedOptions as Args);
@@ -798,6 +808,7 @@ export abstract class ComplexCommand<Bot extends PandaDiscordBot, Args, Shared =
         const result: ArgumentParserResult = {};
         let parser = typeConfig.parsers.chat ?? typeConfig.parsers.string;
         const parserResult = parser(context, result);
+        // @ts-ignore
         if (typeof parserResult?.['then'] === 'function') {
             await parserResult;
         }
@@ -826,25 +837,22 @@ export abstract class ComplexCommand<Bot extends PandaDiscordBot, Args, Shared =
         // Chat arguments must be listed sequentially, while slash arguments can be out of order.
         // Named arguments are the exception to the above rule, as they can be given in any order.
         const parsed: Partial<Args> = {};
-        const context: ChatCommandArgumentParsingContext<Bot> = {
-            value: null,
-            name: null,
-            config: null,
+        const context = {
             i: 0,
             attachmentIndex: 0,
             isNamed: false,
             params,
-        };
+        } as ChatCommandArgumentParsingContext<Bot>;
 
         const cmdArgEntries: [string, SingleArgumentConfig][] = Object.entries(this.args);
 
         const parseNamedArgs = this.shouldParseNamedArgs(params);
 
         // These sets are not needed if we are not parsing named arguments.
-        const requiredArgNames: Set<string> = parseNamedArgs
+        const requiredArgNames: Set<string> | undefined = parseNamedArgs
             ? new Set(cmdArgEntries.filter(([name, config]) => config.required).map(([name, config]) => name))
             : undefined;
-        const argsGivenByName: Set<string> = parseNamedArgs ? new Set() : undefined;
+        const argsGivenByName: Set<string> | undefined = parseNamedArgs ? new Set() : undefined;
 
         // If supported, extract and process all named arguments first.
         if (parseNamedArgs) {
@@ -863,6 +871,7 @@ export abstract class ComplexCommand<Bot extends PandaDiscordBot, Args, Shared =
 
             for (let [name, value] of named.entries()) {
                 name = name.toLocaleLowerCase();
+                // @ts-ignore
                 const config = this.args[name];
                 if (!config) {
                     // Unknown argument name.
@@ -877,11 +886,12 @@ export abstract class ComplexCommand<Bot extends PandaDiscordBot, Args, Shared =
                 context.i = 0;
                 context.params.args = SplitArgumentArray.Fake(value);
 
+                // @ts-ignore
                 parsed[name] = await this.parseCommandArgument(context);
 
-                argsGivenByName.add(name);
+                argsGivenByName!.add(name);
                 if (config.required) {
-                    requiredArgNames.delete(name);
+                    requiredArgNames!.delete(name);
                 }
             }
 
@@ -910,10 +920,11 @@ export abstract class ComplexCommand<Bot extends PandaDiscordBot, Args, Shared =
 
             // Only parse if the current argument being read is not named.
             if (!context.config.hidden && !context.config.named) {
+                // @ts-ignore
                 parsed[context.name] = await this.parseCommandArgument(context);
 
                 if (parseNamedArgs && context.config.required) {
-                    requiredArgNames.delete(context.name);
+                    requiredArgNames!.delete(context.name);
                 }
             }
         }
@@ -921,11 +932,11 @@ export abstract class ComplexCommand<Bot extends PandaDiscordBot, Args, Shared =
         // Assure that all required arguments were given and set default values as necessary.
 
         if (parseNamedArgs) {
-            if (requiredArgNames.size !== 0) {
+            if (requiredArgNames!.size !== 0) {
                 // Some required arguments never showed up.
                 if (!this.suppressArgumentsError) {
                     throw new Error(
-                        `Missing required argument${requiredArgNames.size !== 1 ? 's' : ''} ${[...requiredArgNames]
+                        `Missing required argument${requiredArgNames!.size !== 1 ? 's' : ''} ${[...requiredArgNames!]
                             .map(name => `\`${name}\``)
                             .join(', ')}.`,
                     );
@@ -936,7 +947,7 @@ export abstract class ComplexCommand<Bot extends PandaDiscordBot, Args, Shared =
                 for (; cmdArgIndex < cmdArgEntries.length; ++cmdArgIndex) {
                     const [cmdArgName, cmdArgConfig] = cmdArgEntries[cmdArgIndex];
                     if (
-                        !argsGivenByName.has(cmdArgName) &&
+                        !argsGivenByName!.has(cmdArgName) &&
                         cmdArgConfig.default !== undefined &&
                         cmdArgConfig.default !== null
                     ) {
@@ -949,6 +960,7 @@ export abstract class ComplexCommand<Bot extends PandaDiscordBot, Args, Shared =
                         if (result.error && !cmdArgConfig.hidden && !this.suppressArgumentsError) {
                             throw new Error(result.error);
                         }
+                        // @ts-ignore
                         parsed[cmdArgName] = result.value;
                     }
                 }
@@ -977,6 +989,7 @@ export abstract class ComplexCommand<Bot extends PandaDiscordBot, Args, Shared =
                 if (result.error && !cmdArgConfig.hidden && !this.suppressArgumentsError) {
                     throw new Error(result.error);
                 }
+                // @ts-ignore
                 parsed[cmdArgName] = result.value;
             }
         }
@@ -1032,7 +1045,7 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = never>
     Bot,
     Shared
 > {
-    public args: null = null;
+    public args: never;
 
     public isParameterized(): false {
         return false;
@@ -1096,7 +1109,7 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = never>
         data.name = this.name;
         data.description = this.description;
         data.defaultMemberPermissions = this.memberPermissions ?? this.permission.memberPermissions ?? null;
-        data.dmPermission = this.guildId ? null : !!this.enableInDM;
+        data.dmPermission = this.guildId ? undefined : !!this.enableInDM;
         data.options = [];
 
         for (const [key, cmd] of [...this.subcommandMap.entries()]) {
@@ -1146,22 +1159,24 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = never>
             throw new Error(`Missing subcommand for command \`${this.name}\`.`);
         }
 
-        const subName = params.args.shift();
+        const subName = params.args.shift()!;
 
         if (this.subcommandMap.has(subName)) {
             const subNameIndex = params.content.indexOf(subName);
             if (subNameIndex === -1) {
                 throw new Error(`Could not find subcommand name in content field.`);
             }
-            params.content = params.content.substring(subNameIndex).trimLeft();
+            params.content = params.content.substring(subNameIndex).trimStart();
 
-            const subcommand = this.subcommandMap.get(subName);
+            const subcommand = this.subcommandMap.get(subName)!;
             if (params.bot.validate(params, subcommand)) {
                 return await subcommand.executeChat(params);
             }
         } else {
             throw new Error(`Invalid subcommand for command \`${this.name}\`.`);
         }
+
+        return true;
     }
 
     private getSubcommand(params: SlashCommandParameters<Bot>): string | null {
@@ -1187,6 +1202,7 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = never>
                     return subcommand;
                 }
         }
+        return null;
     }
 
     // Delegates a slash command to a subcommand

@@ -116,7 +116,7 @@ export class SplitArgumentArray {
      */
     public remove(i: number): SplitArgumentArray {
         if (i >= this._args.length) {
-            return;
+            return this;
         }
 
         // Removing the first argument, same as shift.
@@ -160,7 +160,10 @@ export class SplitArgumentArray {
         if (start >= this._args.length) {
             return '';
         }
-        const endIndex = this._args[end]?.['beginIndex'] ?? this._args[this._args.length - 1]['endIndex'];
+        const endIndex =
+            end !== undefined && end < this._args.length
+                ? this._args[end]['beginIndex']
+                : this._args[this._args.length - 1]['endIndex'];
         return this.original.substring(this.args[start]?.['beginIndex'], endIndex);
     }
 
@@ -168,7 +171,7 @@ export class SplitArgumentArray {
      * Removes and returns the first argument.
      * @returns Removed argument.
      */
-    public shift(): string {
+    public shift(): string | undefined {
         return this._args.shift()?.content;
     }
 

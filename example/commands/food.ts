@@ -62,6 +62,7 @@ class SharedFoodData {
 
     public clear() {
         for (const key in FoodGroup) {
+            // @ts-ignore
             this.data.set(FoodGroup[key], new Set());
         }
     }
@@ -162,7 +163,9 @@ class ListAllFoodSubCommand extends SimpleCommand<ExampleBot, SharedFoodData> {
         embed.setTitle(`All Foods`);
         for (const key in FoodGroup) {
             embed.addFields({
+                // @ts-ignore
                 name: `${FoodGroup[key]} Group`,
+                // @ts-ignore
                 value: this.shared.groupToString(FoodGroup[key]),
                 inline: true,
             });

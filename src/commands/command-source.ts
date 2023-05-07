@@ -145,9 +145,11 @@ export class CommandSource {
     public constructor(received: Receivable) {
         this.native = received;
         for (const type in CommandSourceTypeMap) {
+            // @ts-ignore
             const metadata = CommandSourceTypeMap[type] as CommandSourceTypeMetadata;
             if (metadata.type === null || received instanceof metadata.type) {
                 this.type = parseInt(type);
+                // @ts-ignore
                 this[metadata.field] = this.native;
                 break;
             }
@@ -239,14 +241,14 @@ export class CommandSource {
     /**
      * Guild the command was initiated in.
      */
-    public get guild(): Guild {
+    public get guild(): Guild | null {
         return this.native.guild;
     }
 
     /**
      * Guild ID the command was initiated in.
      */
-    public get guildId(): Snowflake {
+    public get guildId(): Snowflake | null {
         return this.native.guildId;
     }
 
@@ -262,7 +264,7 @@ export class CommandSource {
     /**
      * Channel ID the command was initiated in.
      */
-    public get channelId(): Snowflake {
+    public get channelId(): Snowflake | null {
         return this.native.channelId;
     }
 

@@ -104,6 +104,7 @@ export namespace DiscordUtil {
             const maxKeys = keysA.length > keysB.length ? keysA : keysB;
 
             for (const key of maxKeys) {
+                // @ts-ignore
                 if (!deepEqual(a[key], b[key])) {
                     return false;
                 }
@@ -133,17 +134,22 @@ export namespace DiscordUtil {
     export function applicationCommandNeedsUpdate(old: ApplicationCommand, newData: ApplicationCommandData): boolean {
         // First check description and options length.
         let needsUpdate = old.name !== newData.name;
+        // @ts-ignore
         needsUpdate ||= old.description !== newData['description'];
-        needsUpdate ||= !(
-            old.defaultMemberPermissions?.equals(newData.defaultMemberPermissions) ??
-            newData.defaultMemberPermissions === null
-        );
+        needsUpdate ||=
+            old.defaultMemberPermissions !== null && old.defaultMemberPermissions !== undefined
+                ? newData.defaultMemberPermissions === null ||
+                  newData.defaultMemberPermissions === undefined ||
+                  !old.defaultMemberPermissions.equals(newData.defaultMemberPermissions)
+                : newData.defaultMemberPermissions !== null && newData.defaultMemberPermissions !== undefined;
         needsUpdate ||= old.dmPermission !== newData.dmPermission;
+        // @ts-ignore
         needsUpdate ||= old.options.length !== (newData['options']?.length ?? 0);
 
         // Options lengths are the same, so check every option.
         for (let i = 0; !needsUpdate && i < old.options.length; ++i) {
             const a = old.options[i];
+            // @ts-ignore
             const b = newData['options']?.[i];
 
             needsUpdate ||= !deepEqual(a, b);

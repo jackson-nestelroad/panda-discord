@@ -16,7 +16,7 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
         super(bot, 'messageCreate');
     }
 
-    private async runCommand(content: string, msg: Message, guildId: Snowflake) {
+    private async runCommand(content: string, msg: Message, guildId: Snowflake | null) {
         content = content.replace(this.forbiddenMentionRegex, '@\u{200b}$1');
 
         const src = new CommandSource(msg);
@@ -34,7 +34,7 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
             return;
         }
 
-        const cmd = args.shift();
+        const cmd = args.shift()!;
         content = content.substring(cmd.length).trim();
 
         const params: ChatCommandParameters = {
@@ -49,7 +49,7 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
         // Global command.
         if (this.bot.commands.has(cmd)) {
             try {
-                const command = this.bot.commands.get(cmd);
+                const command = this.bot.commands.get(cmd)!;
                 if (command.disableChat) {
                     return;
                 }
@@ -76,14 +76,14 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
             return;
         }
 
-        const prefix = this.bot.getPrefix(msg.guild.id);
+        const prefix = this.bot.getPrefix(msg.guildId);
 
-        if (!msg.content.startsWith(prefix)) {
+        if (!prefix || !msg.content.startsWith(prefix)) {
             // Bot is mentioned.
-            if (msg.mentions.users.has(this.bot.client.user.id)) {
+            if (msg.mentions.users.has(this.bot.client.user!.id)) {
                 // Bot mention is the message's prefix.
-                const mentionIndex = msg.content.indexOf(this.bot.client.user.id);
-                const endOfMentionString = mentionIndex + this.bot.client.user.id.length;
+                const mentionIndex = msg.content.indexOf(this.bot.client.user!.id);
+                const endOfMentionString = mentionIndex + this.bot.client.user!.id.length;
                 if (
                     (mentionIndex === 2 || (mentionIndex === 3 && msg.content[2] === '!')) &&
                     msg.content[0] === '<' &&
@@ -91,12 +91,12 @@ export class DefaultMessageCreateEvent extends BaseEvent<'messageCreate'> {
                     msg.content[endOfMentionString] === '>'
                 ) {
                     const content = msg.content.substring(endOfMentionString + 1).trim();
-                    await this.runCommand(content, msg, msg.guild.id);
+                    await this.runCommand(content, msg, msg.guildId);
                 }
             }
         } else {
             const content = msg.content.substring(prefix.length);
-            await this.runCommand(content, msg, msg.guild.id);
+            await this.runCommand(content, msg, msg.guildId);
         }
     }
 }
