@@ -137,15 +137,14 @@ export namespace DiscordUtil {
         // @ts-ignore
         needsUpdate ||= old.description !== newData['description'];
         needsUpdate ||=
-            old.defaultMemberPermissions !== null && old.defaultMemberPermissions !== undefined
-                ? newData.defaultMemberPermissions === null ||
-                  newData.defaultMemberPermissions === undefined ||
-                  !old.defaultMemberPermissions.equals(newData.defaultMemberPermissions)
-                : newData.defaultMemberPermissions !== null && newData.defaultMemberPermissions !== undefined;
-        needsUpdate ||= old.dmPermission !== newData.dmPermission;
+            old.defaultMemberPermissions === null || old.defaultMemberPermissions === undefined
+                ? newData.defaultMemberPermissions !== null && newData.defaultMemberPermissions !== undefined
+                : newData.defaultMemberPermissions !== null &&
+                  newData.defaultMemberPermissions !== undefined &&
+                  !old.defaultMemberPermissions.equals(newData.defaultMemberPermissions);
+        needsUpdate ||= old.dmPermission !== (newData.dmPermission ?? null);
         // @ts-ignore
         needsUpdate ||= old.options.length !== (newData['options']?.length ?? 0);
-
         // Options lengths are the same, so check every option.
         for (let i = 0; !needsUpdate && i < old.options.length; ++i) {
             const a = old.options[i];
