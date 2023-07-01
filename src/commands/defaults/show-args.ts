@@ -1,23 +1,21 @@
-import {
-    ArgumentType,
-    ArgumentsConfig,
-    CommandParameters,
-    ComplexCommand,
-    EmbedTemplates,
-    SplitArgumentArray,
-    StandardCooldowns,
-} from '../../src';
-import { CommandCategory, CommandPermission, ExampleBot } from '../example-bot';
+import { PandaDiscordBot } from '../../bot';
+import { EmbedTemplates } from '../../embeds/options';
+import { SplitArgumentArray } from '../../util/argument-splitter';
+import { ArgumentType, ArgumentsConfig } from '../arguments';
+import { DefaultCommandCategory } from '../category';
+import { ComplexCommand, StandardCooldowns } from '../chat-input';
+import { CommandParameters } from '../params';
+import { DefaultCommandPermission } from '../permission';
 
 interface ShowArgsArgs {
     args: SplitArgumentArray;
 }
 
-export class ShowArgsCommand extends ComplexCommand<ExampleBot, ShowArgsArgs> {
+export class ShowArgsCommand extends ComplexCommand<PandaDiscordBot, ShowArgsArgs> {
     public name = 'show-args';
     public description = 'Shows the chat command arguments and how they were split by the bot.';
-    public category = CommandCategory.Utility;
-    public permission = CommandPermission.Everyone;
+    public category = DefaultCommandCategory.Utility;
+    public permission = DefaultCommandPermission.Everyone;
     public cooldown = StandardCooldowns.Low;
 
     public args: ArgumentsConfig<ShowArgsArgs> = {

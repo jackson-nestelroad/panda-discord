@@ -1,14 +1,13 @@
 import { GatewayIntentBits } from 'discord.js';
 import { config } from 'dotenv';
 
-import { EnabledCommandType, EvalCommand, HelpCommand, NamedArgsOption, PingCommand } from '../src';
+import { EnabledCommandType, EvalCommand, HelpCommand, NamedArgsOption, PingCommand, ShowArgsCommand } from '../src';
 import { EightBallCommand } from './commands/8ball';
 import { FoodCommand } from './commands/food';
 import { GreetCommand } from './commands/greet';
 import { PurgeCommand } from './commands/purge';
 import { RenameFileCommand } from './commands/rename-file';
 import { RpsCommand } from './commands/rps';
-import { ShowArgsCommand } from './commands/show-args';
 import { StopwatchCommand } from './commands/stopwatch';
 import { TopicCommand } from './commands/topic';
 import { ExampleBot } from './example-bot';

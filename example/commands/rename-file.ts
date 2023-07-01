@@ -46,7 +46,7 @@ export class RenameFileCommand extends ComplexCommand<ExampleBot, RenameFileArgs
     public async run({ src }: CommandParameters<ExampleBot>, args: RenameFileArgs) {
         await src.reply({
             files: [
-                new AttachmentBuilder(args.file.attachment, {
+                new AttachmentBuilder(args.file.url, {
                     name: args.name,
                     description: args.description,
                 }).setSpoiler(args.spoiler),

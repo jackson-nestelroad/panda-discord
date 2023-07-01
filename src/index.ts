@@ -50,6 +50,7 @@ export {
 export { EvalCommand } from './commands/defaults/eval';
 export { HelpCommand } from './commands/defaults/help';
 export { PingCommand } from './commands/defaults/ping';
+export { ShowArgsCommand } from './commands/defaults/show-args';
 export {
     CommandParameters,
     ChatCommandParameters,

@@ -25,7 +25,7 @@ export class MemberListService extends BaseService {
         if (!guild) {
             throw new Error(`Guild ${id} could not be found.`);
         }
-        const members = await guild.members.fetch({ force: true });
+        const members = await guild.members.fetch();
         this.cache.set(id, members);
         return members;
     }

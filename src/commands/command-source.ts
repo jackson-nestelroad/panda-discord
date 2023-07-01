@@ -12,13 +12,13 @@ import {
     Snowflake,
     TextBasedChannel,
     User,
-    WebhookEditMessageOptions,
+    WebhookMessageEditOptions,
 } from 'discord.js';
 
 type DisableSplit = { split?: false };
 type CommonReplyOptions = MessageReplyOptions & InteractionReplyOptions & DisableSplit;
 type CommonSendOptions = MessageCreateOptions & InteractionReplyOptions & DisableSplit;
-type CommonEditOptions = MessageEditOptions & WebhookEditMessageOptions;
+type CommonEditOptions = MessageEditOptions & WebhookMessageEditOptions;
 
 export type ReplyResponse = string | CommonReplyOptions;
 export type SendResponse = string | CommonSendOptions;
