@@ -300,7 +300,7 @@ export abstract class PandaDiscordBot {
     public setHelpPresence(): void {
         const helpPrefix = (this.options.commandType & EnabledCommandType.Chat) !== 0 ? `@${this.name} ` : '/';
         this.client.user!.setActivity(`${helpPrefix}help`, {
-            type: ActivityType.Playing,
+            type: ActivityType.Custom,
         });
     }
 
