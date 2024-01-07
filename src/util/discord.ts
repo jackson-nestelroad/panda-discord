@@ -1,6 +1,18 @@
-import { ApplicationCommand, ApplicationCommandData, GuildMember, Role, User } from 'discord.js';
+import {
+    ApplicationCommand,
+    ApplicationCommandData,
+    ApplicationCommandOptionData,
+    ChatInputApplicationCommandData,
+    GuildMember,
+    Role,
+    User,
+} from 'discord.js';
 
 export type Mentionable = GuildMember | User | Role;
+
+export type MutableChatInputApplicationCommandData = ChatInputApplicationCommandData & {
+    options?: ApplicationCommandOptionData[];
+};
 
 export interface DiscordCodeMarkup {
     readonly language?: string;

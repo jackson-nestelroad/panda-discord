@@ -12,6 +12,7 @@ import {
 import { NamedArgsOption } from '..';
 import { PandaDiscordBot } from '../bot';
 import { SplitArgumentArray } from '../util/argument-splitter';
+import { MutableChatInputApplicationCommandData } from '../util/discord';
 import { ExpireAge, ExpireAgeFormat, TimedCache } from '../util/timed-cache';
 import {
     ArgumentParserResult,
@@ -1104,7 +1105,7 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = never>
     }
 
     public commandData(): ChatInputApplicationCommandData {
-        const data = {} as ChatInputApplicationCommandData;
+        const data = {} as MutableChatInputApplicationCommandData;
 
         data.name = this.name;
         data.description = this.description;
