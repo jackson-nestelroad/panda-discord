@@ -163,6 +163,14 @@ const defaultOptions: CompletePandaOptions = {
     runHelpNamedArg: 'help',
 };
 
+export interface PandaDiscordBot {
+    /**
+     * Function for handling uncaught errors in event handlers.
+     * @param error Uncaught error.
+     */
+    handleUncaughtEventHandlerError?(error: any): void;
+}
+
 /**
  * Discord bot that uses the Panda command framework.
  */

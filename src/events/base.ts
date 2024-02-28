@@ -17,6 +17,9 @@ export abstract class BaseEvent<K extends keyof ExtendableClientEvents, Bot exte
     private execute(...args: ExtendableClientEvents[K]) {
         this.run(...args).catch(error => {
             console.error(`Uncaught exception in ${this.name} event handler: ${error}`);
+            if (this.bot.handleUncaughtEventHandlerError) {
+                this.bot.handleUncaughtEventHandlerError(error);
+            }
         });
     }
 
