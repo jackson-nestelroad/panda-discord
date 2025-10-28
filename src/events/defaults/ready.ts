@@ -4,9 +4,9 @@ import { BaseEvent } from '../base';
 /**
  * Default event handler for the ready event.
  */
-export class DefaultReadyEvent extends BaseEvent<'ready'> {
+export class DefaultReadyEvent extends BaseEvent<'clientReady'> {
     constructor(bot: PandaDiscordBot) {
-        super(bot, 'ready');
+        super(bot, 'clientReady');
     }
 
     public async run() {
