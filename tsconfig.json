@@ -1,8 +1,12 @@
 {
     "compilerOptions": {
-        "target": "ES6",
+        "target": "ES2018",
         "module": "CommonJS",
-        "lib": ["ES2018", "ES2019", "ES2020.String"],
+        "lib": [
+            "ES2018",
+            "ES2019",
+            "ES2020.String"
+        ],
         "types": [],
         "esModuleInterop": true,
         "declaration": true,
@@ -15,6 +19,11 @@
         "skipLibCheck": true,
         "strictNullChecks": true
     },
-    "include": ["./src/**/*", "./example/**/*"],
-    "exclude": ["node_modules"]
+    "include": [
+        "./src/**/*",
+        "./example/**/*"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
 }

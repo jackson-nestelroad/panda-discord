@@ -1,5 +1,6 @@
 import {
     BaseInteraction,
+    BaseMessageOptionsWithPoll,
     CommandInteraction,
     Guild,
     GuildMember,
@@ -320,7 +321,7 @@ export class CommandSource {
      * @param res Response object.
      * @returns New command source for next response.
      */
-    private async respondInteraction(res: SendResponse | ReplyResponse): Promise<CommandSource> {
+    private async respondInteraction(res: string | BaseMessageOptionsWithPoll): Promise<CommandSource> {
         if (!this.isInteraction()) {
             throw new Error(`Attempted to respond to a ${CommandSourceType[this.type]} command as an Interaction.`);
         }
@@ -382,13 +383,16 @@ export class CommandSource {
      */
     public async send(res: SendResponse): Promise<CommandSource> {
         if (this.isMessage()) {
+            if (!this.message.channel.isSendable()) {
+                return this.throwUnsupported();
+            }
             return new CommandSource(await this.message.channel.send(res));
         } else if (this.isInteraction()) {
             return await this.respondInteraction(res);
         } else if (this.isMock()) {
             return new CommandSource(await this.mock.send(res));
         }
-        this.throwUnsupported();
+        return this.throwUnsupported();
     }
 
     /**

@@ -455,11 +455,11 @@ export abstract class SimpleCommand<Bot extends PandaDiscordBot, Shared = never>
 > {
     public args: never;
 
-    public isParameterized(): false {
+    public isParameterized(): this is ParameterizedCommand<Bot, unknown, Shared> {
         return false;
     }
 
-    public isNested(): false {
+    public isNested(): this is NestedCommand<Bot, Shared> {
         return false;
     }
 
@@ -529,11 +529,11 @@ export abstract class ParameterizedCommand<
     Args = unknown,
     Shared = never,
 > extends BaseChatInputCommand<Bot, Shared> {
-    public isParameterized(): true {
+    public isParameterized(): this is ParameterizedCommand<Bot, unknown, Shared> {
         return true;
     }
 
-    public isNested(): false {
+    public isNested(): this is NestedCommand<Bot, Shared> {
         return false;
     }
 
@@ -627,8 +627,9 @@ export abstract class ParameterizedCommand<
                         description: config.description,
                         type: ParameterizedCommand.convertArgumentType(config.type),
                         required: config.required,
-                        choices: config.choices?.length !== 0 ? config.choices : undefined ?? undefined,
-                        channelTypes: config.channelTypes?.length !== 0 ? config.channelTypes : undefined ?? undefined,
+                        choices: (config.choices?.length !== 0 ? config.choices : undefined) ?? undefined,
+                        channelTypes:
+                            (config.channelTypes?.length !== 0 ? config.channelTypes : undefined) ?? undefined,
                         autocomplete: config.autocomplete ? true : undefined,
                     } as ApplicationCommandOptionData;
                 }),
@@ -1048,11 +1049,11 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = never>
 > {
     public args: never;
 
-    public isParameterized(): false {
+    public isParameterized(): this is ParameterizedCommand<Bot, unknown, Shared> {
         return false;
     }
 
-    public isNested(): true {
+    public isNested(): this is NestedCommand<Bot, Shared> {
         return true;
     }
 
@@ -1125,7 +1126,7 @@ export abstract class NestedCommand<Bot extends PandaDiscordBot, Shared = never>
                 name: cmd.name,
                 description: cmd.description,
                 type,
-                options: subData.options?.length !== 0 ? subData.options : [] ?? [],
+                options: (subData.options?.length !== 0 ? subData.options : []) ?? [],
             } as ApplicationCommandSubGroupData | ApplicationCommandSubCommandData);
         }
 
