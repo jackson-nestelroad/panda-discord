@@ -69,26 +69,26 @@ export enum ArgumentType {
 type ArgumentTypeResultMap<A extends ArgumentType> = A extends ArgumentType.String
     ? string
     : A extends ArgumentType.Integer
-    ? number
-    : A extends ArgumentType.Boolean
-    ? boolean
-    : A extends ArgumentType.User
-    ? GuildMember
-    : A extends ArgumentType.Channel
-    ? GuildBasedChannel
-    : A extends ArgumentType.Role
-    ? Role
-    : A extends ArgumentType.Mentionable
-    ? Mentionable
-    : A extends ArgumentType.RestOfContent
-    ? string
-    : A extends ArgumentType.Number
-    ? number
-    : A extends ArgumentType.Attachment
-    ? Attachment
-    : A extends ArgumentType.SplitArguments
-    ? SplitArgumentArray
-    : never;
+      ? number
+      : A extends ArgumentType.Boolean
+        ? boolean
+        : A extends ArgumentType.User
+          ? GuildMember
+          : A extends ArgumentType.Channel
+            ? GuildBasedChannel
+            : A extends ArgumentType.Role
+              ? Role
+              : A extends ArgumentType.Mentionable
+                ? Mentionable
+                : A extends ArgumentType.RestOfContent
+                  ? string
+                  : A extends ArgumentType.Number
+                    ? number
+                    : A extends ArgumentType.Attachment
+                      ? Attachment
+                      : A extends ArgumentType.SplitArguments
+                        ? SplitArgumentArray
+                        : never;
 
 // Conditional type explicitly used for mapping an argument type to its native value type, prior to parsing.
 //
@@ -97,26 +97,26 @@ type ArgumentTypeResultMap<A extends ArgumentType> = A extends ArgumentType.Stri
 type ArgumentTypeNativeMap<A extends ArgumentType> = A extends ArgumentType.String
     ? string
     : A extends ArgumentType.Integer
-    ? number
-    : A extends ArgumentType.Boolean
-    ? boolean
-    : A extends ArgumentType.User
-    ? GuildMember
-    : A extends ArgumentType.Channel
-    ? GuildBasedChannel
-    : A extends ArgumentType.Role
-    ? Role
-    : A extends ArgumentType.Mentionable
-    ? Mentionable
-    : A extends ArgumentType.RestOfContent
-    ? string
-    : A extends ArgumentType.Number
-    ? number
-    : A extends ArgumentType.Attachment
-    ? Attachment
-    : A extends ArgumentType.SplitArguments
-    ? string
-    : never;
+      ? number
+      : A extends ArgumentType.Boolean
+        ? boolean
+        : A extends ArgumentType.User
+          ? GuildMember
+          : A extends ArgumentType.Channel
+            ? GuildBasedChannel
+            : A extends ArgumentType.Role
+              ? Role
+              : A extends ArgumentType.Mentionable
+                ? Mentionable
+                : A extends ArgumentType.RestOfContent
+                  ? string
+                  : A extends ArgumentType.Number
+                    ? number
+                    : A extends ArgumentType.Attachment
+                      ? Attachment
+                      : A extends ArgumentType.SplitArguments
+                        ? string
+                        : never;
 
 // The default value, which is a union of the above types.
 type DefaultT = ArgumentTypeResultMap<ArgumentType>;

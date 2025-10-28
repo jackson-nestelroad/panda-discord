@@ -80,7 +80,7 @@ export class RpsCommand extends ComplexCommand<PandaDiscordBot, RpsArgs> {
         }
 
         const botChoice = args.win
-            ? (choice.beats.keys().next().value as RpsChoice) ?? this.chooseOptionForBot()
+            ? ((choice.beats.keys().next().value as RpsChoice) ?? this.chooseOptionForBot())
             : this.chooseOptionForBot();
 
         const reply = `You chose **${RpsChoice[args.choice]}**. I chose **${RpsChoice[botChoice]}**.`;

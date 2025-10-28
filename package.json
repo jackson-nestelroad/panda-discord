@@ -1,6 +1,6 @@
 {
   "name": "panda-discord",
-  "version": "4.6.1",
+  "version": "4.6.2",
   "description": "Command framework for building Discord bots with discord.js, allowing chat and slash commands to run through one handler.",
   "author": "jackson-nestelroad",
   "license": "Apache-2.0",
@@ -27,9 +27,9 @@
     "prepublish": "npm run build"
   },
   "devDependencies": {
-    "@trivago/prettier-plugin-sort-imports": "^3.4.0",
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
     "dotenv": "^16.0.2",
-    "prettier": "^2.7.1",
+    "prettier": "^3.6.2",
     "typescript": "^5.9.3"
   },
   "engines": {

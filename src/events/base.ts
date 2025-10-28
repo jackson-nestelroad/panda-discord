@@ -10,7 +10,10 @@ export interface ExtendableClientEvents extends ClientEvents {
  * An event handler for an event exposed by Discord.JS.
  */
 export abstract class BaseEvent<K extends keyof ExtendableClientEvents, Bot extends PandaDiscordBot = PandaDiscordBot> {
-    constructor(protected bot: Bot, public readonly name: K) {
+    constructor(
+        protected bot: Bot,
+        public readonly name: K,
+    ) {
         this.bot.client.on(name as any, this.execute.bind(this));
     }
 

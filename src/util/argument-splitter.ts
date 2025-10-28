@@ -80,7 +80,10 @@ export class SplitArgumentArray {
         return this._args;
     }
 
-    constructor(original: string, private _args: SplitArgument[]) {
+    constructor(
+        original: string,
+        private _args: SplitArgument[],
+    ) {
         this.original = original;
     }
 

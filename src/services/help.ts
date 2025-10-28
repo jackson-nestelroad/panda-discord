@@ -79,7 +79,10 @@ export class BaseHelpServiceInternal<Bot extends PandaDiscordBot = PandaDiscordB
         named: true,
     } as const;
 
-    public constructor(public readonly bot: Bot, options: Partial<HelpServiceOptions> = {}) {
+    public constructor(
+        public readonly bot: Bot,
+        options: Partial<HelpServiceOptions> = {},
+    ) {
         this.mergeOptionsIn(options);
     }
 
@@ -170,7 +173,7 @@ export class BaseHelpServiceInternal<Bot extends PandaDiscordBot = PandaDiscordB
      * @returns Prefix, which is either the guild's prefix or a slash.
      */
     public displayPrefix({ bot, guildId }: HelpServiceContext<Bot>): string {
-        return (bot.options.commandType & EnabledCommandType.Slash) !== 0 ? '/' : bot.getPrefix(guildId) ?? '/';
+        return (bot.options.commandType & EnabledCommandType.Slash) !== 0 ? '/' : (bot.getPrefix(guildId) ?? '/');
     }
 }
 
@@ -447,7 +450,10 @@ export abstract class BaseHelpService<
 
     private handlerInstances: HelpHandler[];
 
-    public constructor(bot: Bot, protected readonly internal: Internal) {
+    public constructor(
+        bot: Bot,
+        protected readonly internal: Internal,
+    ) {
         super(bot);
         this.setUpDefaultHandlers();
     }

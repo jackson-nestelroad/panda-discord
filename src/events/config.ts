@@ -4,10 +4,9 @@ import { BaseEvent, ExtendableClientEvents } from './base';
 /**
  * Array of event types that can be instantiated.
  */
-export type EventTypeArray<Bot extends PandaDiscordBot = PandaDiscordBot> = (new (bot: Bot) => BaseEvent<
-    keyof ExtendableClientEvents,
-    Bot
->)[];
+export type EventTypeArray<Bot extends PandaDiscordBot = PandaDiscordBot> = (new (
+    bot: Bot,
+) => BaseEvent<keyof ExtendableClientEvents, Bot>)[];
 
 /**
  * Maps an event name to the object that handles it.
