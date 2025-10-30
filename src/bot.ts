@@ -11,6 +11,7 @@ import {
     GuildMember,
     Interaction,
     Role,
+    SendableChannels,
     Snowflake,
     User,
 } from 'discord.js';
@@ -508,6 +509,15 @@ export abstract class PandaDiscordBot {
      */
     public async sendError(src: CommandSource, error: any) {
         await src.send({ embeds: [this.createErrorEmbed(error)], ephemeral: true });
+    }
+
+    /**
+     * Formats an error and sends it to the channel.
+     * @param src Channel to send to.
+     * @param error Error object or message.
+     */
+    public async sendErrorToChannel(channel: SendableChannels, error: any) {
+        await channel.send({ embeds: [this.createErrorEmbed(error)] });
     }
 
     /**
